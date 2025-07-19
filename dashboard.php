@@ -29,7 +29,9 @@ if (strlen($_SESSION['alogin']) == "") {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Font Awesome 6 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="includes/style.css">
+
+    <link rel="stylesheet" href="includes/style.css">
+    <link rel="stylesheet" href="css/dashboard-custom.css">
 
 </head>
 <body>
@@ -273,6 +275,52 @@ if (strlen($_SESSION['alogin']) == "") {
                 </div>
             </div>
         </div><!-- /.row -->
+
+        <!-- Dashboard Extra Sections -->
+        <div class="row mb-4">
+          <!-- Notifications -->
+          <div class="col-lg-4">
+            <div class="dashboard-section">
+              <h5><i class="fa-solid fa-bell me-2 text-warning"></i>Notifications</h5>
+              <ul class="notifications-list">
+                <li><span class="badge bg-warning me-2">New</span> 3 candidates registered today</li>
+                <li><span class="badge bg-info me-2">Info</span> Batch 2025A assessment scheduled</li>
+                <li><span class="badge bg-success me-2">Success</span> All payments processed</li>
+              </ul>
+            </div>
+          </div>
+          <!-- Recent Activity -->
+          <div class="col-lg-4">
+            <div class="dashboard-section">
+              <h5><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Recent Activity</h5>
+              <ul class="recent-activity-list">
+                <li>Candidate <b>John Doe</b> added to Batch 2025A</li>
+                <li>Result uploaded for Batch 2024B</li>
+                <li>Invoice #1234 generated</li>
+              </ul>
+            </div>
+          </div>
+          <!-- Quick Links -->
+          <div class="col-lg-4">
+            <div class="dashboard-section quick-links">
+              <h5><i class="fa-solid fa-link me-2 text-success"></i>Quick Links</h5>
+              <a href="add-candidate.php" class="btn btn-outline-primary btn-sm mb-2"><i class="fa fa-user-plus me-1"></i> Add Candidate</a>
+              <a href="add-batch.php" class="btn btn-outline-success btn-sm mb-2"><i class="fa fa-layer-group me-1"></i> Add Batch</a>
+              <a href="manage-results.php" class="btn btn-outline-info btn-sm mb-2"><i class="fa fa-chart-line me-1"></i> Manage Results</a>
+              <a href="manage-invoice.php" class="btn btn-outline-warning btn-sm mb-2"><i class="fa fa-file-invoice me-1"></i> Invoices</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Chart -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="dashboard-section">
+              <h5><i class="fa-solid fa-chart-pie me-2 text-danger"></i>Candidate Overview</h5>
+              <canvas id="dashboardChart" height="80"></canvas>
+            </div>
+          </div>
+        </div>
     </main>
     </div><!-- /.row -->
   </div><!-- /.container-fluid -->
@@ -289,6 +337,37 @@ if (strlen($_SESSION['alogin']) == "") {
   <script src="js/prism/prism.js"></script>
   <script src="js/select2/select2.min.js"></script>
   <script src="js/main.js"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Dashboard Chart Example
+    document.addEventListener('DOMContentLoaded', function() {
+      var ctx = document.getElementById('dashboardChart').getContext('2d');
+      var dashboardChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Registered', 'Trained', 'Ongoing', 'Passed'],
+          datasets: [{
+            data: [
+              <?php echo $totalstudents; ?>,
+              <?php echo $totalTrained; ?>,
+              <?php echo $ongoingCandidates; ?>,
+              <?php echo $totalPassed; ?>
+            ],
+            backgroundColor: [
+              '#2563eb', '#0d9488', '#facc15', '#22d3ee'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    });
+  </script>
 </body>
 </html>
 <?php } ?>
