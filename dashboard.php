@@ -48,11 +48,14 @@ if (strlen($_SESSION['alogin']) == "") {
 
       <!-- Main Content -->
       <main class="col-lg-10 col-md-9 p-4">
-        <h2 class="mb-4">Softpro Dashboard </h2>
-        <div class="row g-3">
+        <h2 class="mb-4">
+          <i class="fas fa-tachometer-alt me-3 text-primary"></i>
+          Softpro Dashboard
+        </h2>
+        <div class="row g-4">
             <!-- Regd Candidates Card -->
             <div class="col-md-3">
-                <div class="dashboard-card bg-primary text-white" onclick="location.href='manage-candidate.php';">
+                <div class="dashboard-card bg-primary text-white" onclick="location.href='manage-candidate.php';" data-count="<?php echo $totalstudents; ?>">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <?php
@@ -61,7 +64,7 @@ if (strlen($_SESSION['alogin']) == "") {
                             $query1->execute();
                             $totalstudents = $query1->rowCount();
                             ?>
-                            <h3><?php echo $totalstudents; ?></h3>
+                            <h3 class="counter-value"><?php echo $totalstudents; ?></h3>
                             <p>Regd Candidates</p>
                         </div>
                         <div class="icon"><i class="fa-solid fa-users"></i></div>
@@ -70,7 +73,7 @@ if (strlen($_SESSION['alogin']) == "") {
             </div>
             <!-- Trained Candidates Card -->
             <div class="col-md-3">
-                <div class="dashboard-card bg-success text-white" onclick="location.href='trained-candidate.php';">
+                <div class="dashboard-card bg-success text-white" onclick="location.href='trained-candidate.php';" data-count="<?php echo htmlentities($totalTrained); ?>">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <?php
@@ -81,10 +84,10 @@ if (strlen($_SESSION['alogin']) == "") {
                             $query->execute();
                             $totalTrained = $query->rowCount();
                             ?>
-                            <h3><?php echo htmlentities($totalTrained); ?></h3>
+                            <h3 class="counter-value"><?php echo htmlentities($totalTrained); ?></h3>
                             <p>Trained Candidates</p>
                         </div>
-                        <div class="icon"><i class="fa-solid fa-ticket"></i></div>
+                        <div class="icon"><i class="fa-solid fa-graduation-cap"></i></div>
                     </div>
                 </div>
             </div>
@@ -342,6 +345,33 @@ if (strlen($_SESSION['alogin']) == "") {
   <script>
     // Dashboard Chart Example
     document.addEventListener('DOMContentLoaded', function() {
+      // Animated counters
+      function animateCounters() {
+        const counters = document.querySelectorAll('.counter-value');
+        counters.forEach(counter => {
+          const target = parseInt(counter.textContent);
+          const increment = target / 50;
+          let current = 0;
+          
+          const updateCounter = () => {
+            if (current < target) {
+              current += increment;
+              counter.textContent = Math.floor(current);
+              requestAnimationFrame(updateCounter);
+            } else {
+              counter.textContent = target;
+            }
+          };
+          
+          // Start animation after a delay
+          setTimeout(updateCounter, Math.random() * 500);
+        });
+      }
+      
+      // Initialize counter animation
+      setTimeout(animateCounters, 300);
+      
+      // Dashboard Chart
       var ctx = document.getElementById('dashboardChart').getContext('2d');
       var dashboardChart = new Chart(ctx, {
         type: 'doughnut',
@@ -355,16 +385,60 @@ if (strlen($_SESSION['alogin']) == "") {
               <?php echo $totalPassed; ?>
             ],
             backgroundColor: [
-              '#2563eb', '#0d9488', '#facc15', '#22d3ee'
+              '#667eea', '#4facfe', '#f093fb', '#43e97b'
             ],
-            borderWidth: 1
+            borderWidth: 3,
+            borderColor: '#fff',
+            hoverBorderWidth: 4,
+            hoverOffset: 8
           }]
         },
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'bottom' }
+            legend: { 
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                font: {
+                  size: 12,
+                  weight: '600'
+                }
+              }
+            }
+          },
+          animation: {
+            animateRotate: true,
+            animateScale: true,
+            duration: 2000,
+            easing: 'easeOutQuart'
           }
         }
+      });
+      
+      // Add click effects to dashboard cards
+      const dashboardCards = document.querySelectorAll('.dashboard-card');
+      dashboardCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+          // Create ripple effect
+          const ripple = document.createElement('span');
+          const rect = card.getBoundingClientRect();
+          const size = Math.max(rect.width, rect.height);
+          const x = e.clientX - rect.left - size / 2;
+          const y = e.clientY - rect.top - size / 2;
+          
+          ripple.style.width = ripple.style.height = size + 'px';
+          ripple.style.left = x + 'px';
+          ripple.style.top = y + 'px';
+          ripple.classList.add('ripple');
+          
+          card.appendChild(ripple);
+          
+          setTimeout(() => {
+            ripple.remove();
+          }, 600);
+        });
       });
     });
   </script>
