@@ -205,78 +205,6 @@ if (strlen($_SESSION['alogin']) == "") {
                     </div>
                 </div>
             </div>
-            <!-- Training Centers Card -->
-            <div class="col-md-3">
-                <div class="dashboard-card bg-secondary text-white" onclick="location.href='manage-trainingcenter.php';">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <?php
-                            $sqlTC = "SELECT TrainingcenterId FROM tbltrainingcenter";
-                            $queryTC = $dbh->prepare($sqlTC);
-                            $queryTC->execute();
-                            $totalTC = $queryTC->rowCount();
-                            ?>
-                            <h3><?php echo htmlentities($totalTC); ?></h3>
-                            <p>Training Centers</p>
-                        </div>
-                        <div class="icon"><i class="fa-solid fa-school"></i></div>
-                    </div>
-                </div>
-            </div>
-            <!-- Schemes Card -->
-            <div class="col-md-3">
-                <div class="dashboard-card bg-pink text-white" onclick="location.href='manage-scheme.php';">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <?php
-                            $sqlScheme = "SELECT Schemeid FROM tblscheme";
-                            $queryScheme = $dbh->prepare($sqlScheme);
-                            $queryScheme->execute();
-                            $totalSchemes = $queryScheme->rowCount();
-                            ?>
-                            <h3><?php echo htmlentities($totalSchemes); ?></h3>
-                            <p>Schemes</p>
-                        </div>
-                        <div class="icon"><i class="fa-solid fa-clipboard-list"></i></div>
-                    </div>
-                </div>
-            </div>
-            <!-- Sectors Card -->
-            <div class="col-md-3">
-                <div class="dashboard-card bg-success text-white" onclick="location.href='manage-sector.php';">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <?php
-                            $sqlSector = "SELECT SectorId FROM tblsector";
-                            $querySector = $dbh->prepare($sqlSector);
-                            $querySector->execute();
-                            $totalSectors = $querySector->rowCount();
-                            ?>
-                            <h3><?php echo htmlentities($totalSectors); ?></h3>
-                            <p>Sectors</p>
-                        </div>
-                        <div class="icon"><i class="fa-solid fa-industry"></i></div>
-                    </div>
-                </div>
-            </div>
-            <!-- Job Rolls Card -->
-            <div class="col-md-3">
-                <div class="dashboard-card bg-dark text-white" onclick="location.href='manage-jobroll.php';">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <?php
-                            $sqlJobroll = "SELECT JobrollId FROM tbljobroll";
-                            $queryJobroll = $dbh->prepare($sqlJobroll);
-                            $queryJobroll->execute();
-                            $totalJobroll = $queryJobroll->rowCount();
-                            ?>
-                            <h3><?php echo htmlentities($totalJobroll); ?></h3>
-                            <p>Job Rolls</p>
-                        </div>
-                        <div class="icon"><i class="fa-solid fa-briefcase"></i></div>
-                    </div>
-                </div>
-            </div>
         </div><!-- /.row -->
 
         <!-- Dashboard Extra Sections -->
@@ -319,8 +247,8 @@ if (strlen($_SESSION['alogin']) == "") {
         <div class="row mb-4">
           <div class="col-12">
             <div class="dashboard-section">
-              <h5><i class="fa-solid fa-chart-pie me-2 text-danger"></i>Candidate Overview</h5>
-              <canvas id="dashboardChart" height="80"></canvas>
+              <h5><i class="fa-solid fa-chart-line me-2 text-primary"></i>Student Registrations - Last 6 Months</h5>
+              <canvas id="registrationChart" height="80"></canvas>
             </div>
           </div>
         </div>
@@ -345,52 +273,72 @@ if (strlen($_SESSION['alogin']) == "") {
   <script>
     // Dashboard Chart Example
     document.addEventListener('DOMContentLoaded', function() {
-      // Animated counters
+      // Simplified counter animation to prevent blinking
       function animateCounters() {
         const counters = document.querySelectorAll('.counter-value');
         counters.forEach(counter => {
           const target = parseInt(counter.textContent);
-          const increment = target / 50;
-          let current = 0;
-          
-          const updateCounter = () => {
-            if (current < target) {
-              current += increment;
-              counter.textContent = Math.floor(current);
-              requestAnimationFrame(updateCounter);
-            } else {
-              counter.textContent = target;
-            }
-          };
-          
-          // Start animation after a delay
-          setTimeout(updateCounter, Math.random() * 500);
+          if (target > 0) {
+            const increment = Math.max(1, target / 30);
+            let current = 0;
+            
+            const updateCounter = () => {
+              if (current < target) {
+                current += increment;
+                counter.textContent = Math.floor(current);
+                setTimeout(updateCounter, 50);
+              } else {
+                counter.textContent = target;
+              }
+            };
+            
+            updateCounter();
+          }
         });
       }
       
       // Initialize counter animation
-      setTimeout(animateCounters, 300);
+      setTimeout(animateCounters, 200);
       
-      // Dashboard Chart
-      var ctx = document.getElementById('dashboardChart').getContext('2d');
-      var dashboardChart = new Chart(ctx, {
-        type: 'doughnut',
+      // Get 6 months registration data
+      <?php
+      // Get data for last 6 months
+      $months = [];
+      $registrations = [];
+      
+      for ($i = 5; $i >= 0; $i--) {
+        $month = date('Y-m', strtotime("-$i months"));
+        $monthName = date('M Y', strtotime("-$i months"));
+        
+        $sql = "SELECT COUNT(*) as count FROM tblcandidate WHERE DATE_FORMAT(CreationDate, '%Y-%m') = '$month'";
+        $query = $dbh->prepare($sql);
+        $query->execute();
+        $result = $query->fetch(PDO::FETCH_ASSOC);
+        
+        $months[] = $monthName;
+        $registrations[] = (int)$result['count'];
+      }
+      ?>
+      
+      // Registration Chart
+      var ctx = document.getElementById('registrationChart').getContext('2d');
+      var registrationChart = new Chart(ctx, {
+        type: 'line',
         data: {
-          labels: ['Registered', 'Trained', 'Ongoing', 'Passed'],
+          labels: <?php echo json_encode($months); ?>,
           datasets: [{
-            data: [
-              <?php echo $totalstudents; ?>,
-              <?php echo $totalTrained; ?>,
-              <?php echo $ongoingCandidates; ?>,
-              <?php echo $totalPassed; ?>
-            ],
-            backgroundColor: [
-              '#667eea', '#4facfe', '#f093fb', '#43e97b'
-            ],
+            label: 'Student Registrations',
+            data: <?php echo json_encode($registrations); ?>,
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
             borderWidth: 3,
-            borderColor: '#fff',
-            hoverBorderWidth: 4,
-            hoverOffset: 8
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#667eea',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8
           }]
         },
         options: {
@@ -398,7 +346,8 @@ if (strlen($_SESSION['alogin']) == "") {
           maintainAspectRatio: false,
           plugins: {
             legend: { 
-              position: 'bottom',
+              display: true,
+              position: 'top',
               labels: {
                 padding: 20,
                 font: {
@@ -408,36 +357,43 @@ if (strlen($_SESSION['alogin']) == "") {
               }
             }
           },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0,0,0,0.1)'
+              },
+              ticks: {
+                stepSize: 1
+              }
+            },
+            x: {
+              grid: {
+                color: 'rgba(0,0,0,0.1)'
+              }
+            }
+          },
+          elements: {
+            point: {
+              hoverBackgroundColor: '#764ba2'
+            }
+          },
           animation: {
-            animateRotate: true,
-            animateScale: true,
-            duration: 2000,
-            easing: 'easeOutQuart'
+            duration: 1500,
+            easing: 'easeInOutQuart'
           }
         }
       });
       
-      // Add click effects to dashboard cards
+      // Simplified click effects to prevent blinking
       const dashboardCards = document.querySelectorAll('.dashboard-card');
       dashboardCards.forEach(card => {
         card.addEventListener('click', function(e) {
-          // Create ripple effect
-          const ripple = document.createElement('span');
-          const rect = card.getBoundingClientRect();
-          const size = Math.max(rect.width, rect.height);
-          const x = e.clientX - rect.left - size / 2;
-          const y = e.clientY - rect.top - size / 2;
-          
-          ripple.style.width = ripple.style.height = size + 'px';
-          ripple.style.left = x + 'px';
-          ripple.style.top = y + 'px';
-          ripple.classList.add('ripple');
-          
-          card.appendChild(ripple);
-          
+          // Simple scale effect instead of ripple
+          card.style.transform = 'scale(0.98)';
           setTimeout(() => {
-            ripple.remove();
-          }, 600);
+            card.style.transform = '';
+          }, 150);
         });
       });
     });

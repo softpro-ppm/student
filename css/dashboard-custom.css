@@ -4,16 +4,15 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   cursor: pointer;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem 1.25rem;
   margin-bottom: 1.5rem;
-  min-height: 160px;
+  min-height: 120px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
 }
 
 .dashboard-card::before {
@@ -114,16 +113,16 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .dashboard-card {
-    min-height: 140px;
-    padding: 1.5rem 1rem;
+    min-height: 100px;
+    padding: 1.25rem 1rem;
   }
   
   .dashboard-card h3 {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
   
   .dashboard-card .icon {
-    font-size: 2.5rem;
+    font-size: 2rem;
   }
 }
 
@@ -213,7 +212,7 @@
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -222,16 +221,12 @@
 }
 
 .dashboard-card {
-  animation: fadeInUp 0.6s ease-out;
+  animation: fadeInUp 0.4s ease-out;
+  animation-fill-mode: both;
 }
 
-.dashboard-card:nth-child(1) { animation-delay: 0.1s; }
-.dashboard-card:nth-child(2) { animation-delay: 0.2s; }
-.dashboard-card:nth-child(3) { animation-delay: 0.3s; }
-.dashboard-card:nth-child(4) { animation-delay: 0.4s; }
-
 /* Chart container styling */
-#dashboardChart {
+#registrationChart {
   border-radius: 12px;
   padding: 1rem;
 }
@@ -285,43 +280,16 @@ main h2::after {
   }
 }
 
-/* Ripple effect for dashboard cards */
+/* Ripple effect for dashboard cards - Simplified */
 .dashboard-card {
   position: relative;
   overflow: hidden;
 }
 
-.ripple {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(0);
-  animation: ripple-animation 0.6s linear;
-  pointer-events: none;
-}
-
-@keyframes ripple-animation {
-  to {
-    transform: scale(2);
-    opacity: 0;
-  }
-}
-
-/* Enhanced hover effects */
+/* Enhanced hover effects - Simplified */
 .dashboard-card:hover .icon {
-  animation: bounce 0.6s ease-in-out;
-}
-
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
-    transform: translateY(-50%);
-  }
-  40% {
-    transform: translateY(-60%);
-  }
-  60% {
-    transform: translateY(-55%);
-  }
+  opacity: 0.25;
+  transform: translateY(-50%) scale(1.05);
 }
 
 /* Custom scrollbar for activity lists */
