@@ -46,11 +46,14 @@ if (strlen($_SESSION['alogin']) == "") {
 
       <!-- Main Content -->
       <main class="col-lg-10 col-md-9 p-4">
-        <h2 class="mb-4">Softpro Dashboard </h2>
-        <div class="row g-3">
+        <h2 class="mb-4">
+          <i class="fas fa-tachometer-alt me-3 text-primary"></i>
+          Softpro Dashboard
+        </h2>
+        <div class="row g-4">
             <!-- Regd Candidates Card -->
             <div class="col-md-3">
-                <div class="dashboard-card bg-primary text-white" onclick="location.href='manage-candidate.php';">
+                <div class="dashboard-card bg-primary text-white" onclick="location.href='manage-candidate.php';" data-count="<?php echo $totalstudents; ?>">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <?php
@@ -59,7 +62,7 @@ if (strlen($_SESSION['alogin']) == "") {
                             $query1->execute();
                             $totalstudents = $query1->rowCount();
                             ?>
-                            <h3><?php echo $totalstudents; ?></h3>
+                            <h3 class="counter-value"><?php echo $totalstudents; ?></h3>
                             <p>Regd Candidates</p>
                         </div>
                         <div class="icon"><i class="fa-solid fa-users"></i></div>
@@ -68,7 +71,7 @@ if (strlen($_SESSION['alogin']) == "") {
             </div>
             <!-- Trained Candidates Card -->
             <div class="col-md-3">
-                <div class="dashboard-card bg-success text-white" onclick="location.href='trained-candidate.php';">
+                <div class="dashboard-card bg-success text-white" onclick="location.href='trained-candidate.php';" data-count="<?php echo htmlentities($totalTrained); ?>">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <?php
@@ -79,10 +82,10 @@ if (strlen($_SESSION['alogin']) == "") {
                             $query->execute();
                             $totalTrained = $query->rowCount();
                             ?>
-                            <h3><?php echo htmlentities($totalTrained); ?></h3>
+                            <h3 class="counter-value"><?php echo htmlentities($totalTrained); ?></h3>
                             <p>Trained Candidates</p>
                         </div>
-                        <div class="icon"><i class="fa-solid fa-ticket"></i></div>
+                        <div class="icon"><i class="fa-solid fa-graduation-cap"></i></div>
                     </div>
                 </div>
             </div>
@@ -200,79 +203,56 @@ if (strlen($_SESSION['alogin']) == "") {
                     </div>
                 </div>
             </div>
-            <!-- Training Centers Card -->
-            <div class="col-md-3">
-                <div class="dashboard-card bg-secondary text-white" onclick="location.href='manage-trainingcenter.php';">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <?php
-                            $sqlTC = "SELECT TrainingcenterId FROM tbltrainingcenter";
-                            $queryTC = $dbh->prepare($sqlTC);
-                            $queryTC->execute();
-                            $totalTC = $queryTC->rowCount();
-                            ?>
-                            <h3><?php echo htmlentities($totalTC); ?></h3>
-                            <p>Training Centers</p>
-                        </div>
-                        <div class="icon"><i class="fa-solid fa-school"></i></div>
-                    </div>
-                </div>
-            </div>
-            <!-- Schemes Card -->
-            <div class="col-md-3">
-                <div class="dashboard-card bg-pink text-white" onclick="location.href='manage-scheme.php';">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <?php
-                            $sqlScheme = "SELECT Schemeid FROM tblscheme";
-                            $queryScheme = $dbh->prepare($sqlScheme);
-                            $queryScheme->execute();
-                            $totalSchemes = $queryScheme->rowCount();
-                            ?>
-                            <h3><?php echo htmlentities($totalSchemes); ?></h3>
-                            <p>Schemes</p>
-                        </div>
-                        <div class="icon"><i class="fa-solid fa-clipboard-list"></i></div>
-                    </div>
-                </div>
-            </div>
-            <!-- Sectors Card -->
-            <div class="col-md-3">
-                <div class="dashboard-card bg-success text-white" onclick="location.href='manage-sector.php';">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <?php
-                            $sqlSector = "SELECT SectorId FROM tblsector";
-                            $querySector = $dbh->prepare($sqlSector);
-                            $querySector->execute();
-                            $totalSectors = $querySector->rowCount();
-                            ?>
-                            <h3><?php echo htmlentities($totalSectors); ?></h3>
-                            <p>Sectors</p>
-                        </div>
-                        <div class="icon"><i class="fa-solid fa-industry"></i></div>
-                    </div>
-                </div>
-            </div>
-            <!-- Job Rolls Card -->
-            <div class="col-md-3">
-                <div class="dashboard-card bg-dark text-white" onclick="location.href='manage-jobroll.php';">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <?php
-                            $sqlJobroll = "SELECT JobrollId FROM tbljobroll";
-                            $queryJobroll = $dbh->prepare($sqlJobroll);
-                            $queryJobroll->execute();
-                            $totalJobroll = $queryJobroll->rowCount();
-                            ?>
-                            <h3><?php echo htmlentities($totalJobroll); ?></h3>
-                            <p>Job Rolls</p>
-                        </div>
-                        <div class="icon"><i class="fa-solid fa-briefcase"></i></div>
-                    </div>
-                </div>
-            </div>
         </div><!-- /.row -->
+<<<<<<< HEAD
+
+        <!-- Dashboard Extra Sections -->
+        <div class="row mb-4">
+          <!-- Notifications -->
+          <div class="col-lg-4">
+            <div class="dashboard-section">
+              <h5><i class="fa-solid fa-bell me-2 text-warning"></i>Notifications</h5>
+              <ul class="notifications-list">
+                <li><span class="badge bg-warning me-2">New</span> 3 candidates registered today</li>
+                <li><span class="badge bg-info me-2">Info</span> Batch 2025A assessment scheduled</li>
+                <li><span class="badge bg-success me-2">Success</span> All payments processed</li>
+              </ul>
+            </div>
+          </div>
+          <!-- Recent Activity -->
+          <div class="col-lg-4">
+            <div class="dashboard-section">
+              <h5><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Recent Activity</h5>
+              <ul class="recent-activity-list">
+                <li>Candidate <b>John Doe</b> added to Batch 2025A</li>
+                <li>Result uploaded for Batch 2024B</li>
+                <li>Invoice #1234 generated</li>
+              </ul>
+            </div>
+          </div>
+          <!-- Quick Links -->
+          <div class="col-lg-4">
+            <div class="dashboard-section quick-links">
+              <h5><i class="fa-solid fa-link me-2 text-success"></i>Quick Links</h5>
+              <a href="add-candidate.php" class="btn btn-outline-primary btn-sm mb-2"><i class="fa fa-user-plus me-1"></i> Add Candidate</a>
+              <a href="add-batch.php" class="btn btn-outline-success btn-sm mb-2"><i class="fa fa-layer-group me-1"></i> Add Batch</a>
+              <a href="manage-results.php" class="btn btn-outline-info btn-sm mb-2"><i class="fa fa-chart-line me-1"></i> Manage Results</a>
+              <a href="manage-invoice.php" class="btn btn-outline-warning btn-sm mb-2"><i class="fa fa-file-invoice me-1"></i> Invoices</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Chart -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="dashboard-section">
+              <h5><i class="fa-solid fa-chart-line me-2 text-primary"></i>Student Registrations - Last 6 Months</h5>
+              <canvas id="registrationChart" height="80"></canvas>
+            </div>
+          </div>
+        </div>
+=======
+>>>>>>> parent of a241dd1 (a)
     </main>
     </div><!-- /.row -->
   </div><!-- /.container-fluid -->
@@ -289,6 +269,139 @@ if (strlen($_SESSION['alogin']) == "") {
   <script src="js/prism/prism.js"></script>
   <script src="js/select2/select2.min.js"></script>
   <script src="js/main.js"></script>
+<<<<<<< HEAD
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Dashboard Chart Example
+    document.addEventListener('DOMContentLoaded', function() {
+      // Simplified counter animation to prevent blinking
+      function animateCounters() {
+        const counters = document.querySelectorAll('.counter-value');
+        counters.forEach(counter => {
+          const target = parseInt(counter.textContent);
+          if (target > 0) {
+            const increment = Math.max(1, target / 30);
+            let current = 0;
+            
+            const updateCounter = () => {
+              if (current < target) {
+                current += increment;
+                counter.textContent = Math.floor(current);
+                setTimeout(updateCounter, 50);
+              } else {
+                counter.textContent = target;
+              }
+            };
+            
+            updateCounter();
+          }
+        });
+      }
+      
+      // Initialize counter animation
+      setTimeout(animateCounters, 200);
+      
+      // Get 6 months registration data
+      <?php
+      // Get data for last 6 months
+      $months = [];
+      $registrations = [];
+      
+      for ($i = 5; $i >= 0; $i--) {
+        $month = date('Y-m', strtotime("-$i months"));
+        $monthName = date('M Y', strtotime("-$i months"));
+        
+        $sql = "SELECT COUNT(*) as count FROM tblcandidate WHERE DATE_FORMAT(CreationDate, '%Y-%m') = '$month'";
+        $query = $dbh->prepare($sql);
+        $query->execute();
+        $result = $query->fetch(PDO::FETCH_ASSOC);
+        
+        $months[] = $monthName;
+        $registrations[] = (int)$result['count'];
+      }
+      ?>
+      
+      // Registration Chart
+      var ctx = document.getElementById('registrationChart').getContext('2d');
+      var registrationChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: <?php echo json_encode($months); ?>,
+          datasets: [{
+            label: 'Student Registrations',
+            data: <?php echo json_encode($registrations); ?>,
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#667eea',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { 
+              display: true,
+              position: 'top',
+              labels: {
+                padding: 20,
+                font: {
+                  size: 12,
+                  weight: '600'
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0,0,0,0.1)'
+              },
+              ticks: {
+                stepSize: 1
+              }
+            },
+            x: {
+              grid: {
+                color: 'rgba(0,0,0,0.1)'
+              }
+            }
+          },
+          elements: {
+            point: {
+              hoverBackgroundColor: '#764ba2'
+            }
+          },
+          animation: {
+            duration: 1500,
+            easing: 'easeInOutQuart'
+          }
+        }
+      });
+      
+      // Simplified click effects to prevent blinking
+      const dashboardCards = document.querySelectorAll('.dashboard-card');
+      dashboardCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+          // Simple scale effect instead of ripple
+          card.style.transform = 'scale(0.98)';
+          setTimeout(() => {
+            card.style.transform = '';
+          }, 150);
+        });
+      });
+    });
+  </script>
+=======
+>>>>>>> parent of a241dd1 (a)
 </body>
 </html>
 <?php } ?>
