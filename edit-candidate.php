@@ -76,7 +76,7 @@ if (strlen($_SESSION['alogin']) == "") {
     // Execute the query and check for success
     if ($query->execute()) {
         $msg = "Data has been updated successfully";
-        echo '<script> setTimeout(function() { window.location.href = "payment.php?last_id=' . $cid . '"; }, 2000); </script>';
+        echo '<script> setTimeout(function() { window.location.href = "manage-candidate.php"; }, 2000); </script>';
     } else {
         $error = "An error occurred while updating data.";
     }

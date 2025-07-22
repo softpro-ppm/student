@@ -41,13 +41,15 @@ if (strlen($_SESSION['alogin']) == "") {
                 $Balance_val = $row['balance'];
             }
             
-            
         }
+        // Check if payment is complete
+        $is_payment_complete = ($Paid_val >= $total_fee && $total_fee > 0);
     } else {
         
         $Discount_val = '0';
         $Paid_val = '0';
         $total_fee = '0';
+        $is_payment_complete = false;
     }
 
     if (isset($_POST['submit'])) {
@@ -85,7 +87,6 @@ if (strlen($_SESSION['alogin']) == "") {
 
         if ($recordExists) {
 
-
             $balance = $_POST['balance'];
             
             $paid = $_POST['total_fee'] - $_POST['balance'];
@@ -95,6 +96,17 @@ if (strlen($_SESSION['alogin']) == "") {
             }else{
                 $status = "Pending";
             }
+
+            // Check if there are any already approved payments for this candidate
+            // This prevents resetting approved payments back to pending when editing candidate details
+            $checkApprovedSql = "SELECT added_type FROM payment WHERE candidate_id = :candidate_id";
+            $checkApprovedQuery = $dbh->prepare($checkApprovedSql);
+            $checkApprovedQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+            $checkApprovedQuery->execute();
+            $currentPayment = $checkApprovedQuery->fetch(PDO::FETCH_ASSOC);
+            
+            // Preserve existing added_type if it's already approved (1), otherwise use current user type
+            $added_type = ($currentPayment && $currentPayment['added_type'] == 1) ? 1 : $_SESSION['user_type'];
 
              // Update existing record
             $updateSql = "UPDATE payment 
@@ -110,19 +122,21 @@ if (strlen($_SESSION['alogin']) == "") {
             $updateQuery->bindParam(':created_at', $created_at, PDO::PARAM_STR);
             $updateQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT); // Ensure candidate_id is bound
             $updateQuery->bindParam(':status', $status, PDO::PARAM_STR); // Ensure candidate_id is bound
-            $updateQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR); // Ensure candidate_id is bound
+            $updateQuery->bindParam(':added_type', $added_type, PDO::PARAM_STR); // Use preserved added_type
 
             // Execute the query
             $updateQuery->execute();
 
             $paid = $_POST['discount'] + $_POST['paid'];
             $payment_mode = $_POST['payment_mode'];
+            
+            // For EMI entries, use the same logic - preserve approval status
             $insertSql = "INSERT INTO emi_list (candidate_id, paid, created,added_type,payment_mode ) VALUES ( :candidate_id, :paid, :created,:added_type,:payment_mode )";
             $insertQuery = $dbh->prepare($insertSql);
             $insertQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
             $insertQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
             $insertQuery->bindParam(':created', $created, PDO::PARAM_STR);
-            $insertQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
+            $insertQuery->bindParam(':added_type', $added_type, PDO::PARAM_STR); // Use same preserved added_type
             $insertQuery->bindParam(':payment_mode', $payment_mode, PDO::PARAM_STR);
             $insertQuery->execute();
 
@@ -408,6 +422,20 @@ if (strlen($_SESSION['alogin']) == "") {
             max-height: 300px; /* Adjust height as needed */
             overflow-y: auto !important;
         }
+        
+        /* Styling for disabled payment fields */
+        input:disabled, select:disabled {
+            background-color: #f8f9fa !important;
+            color: #6c757d !important;
+            opacity: 0.8;
+            cursor: not-allowed;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
 
     </style>
 </head>
@@ -513,13 +541,13 @@ if (strlen($_SESSION['alogin']) == "") {
                                         <div class="form-group col-md-6">
                                             <label for="paid">Pay</label>
                                             <input type="number" name="paid" class="form-control" id="paid"
-                                                placeholder="Paid" value="0">
+                                                placeholder="Paid" value="0" <?php if($is_payment_complete) { echo 'disabled readonly'; } ?>>
                                         </div>
 
                                         <div class="form-group col-md-6">
                                             <label for="balance">Balance</label>
                                             <input type="text" name="balance" class="form-control" id="balance"
-                                                placeholder="Balance" value="<?=$Balance_val?>">
+                                                placeholder="Balance" value="<?=$Balance_val?>" <?php if($is_payment_complete) { echo 'disabled readonly'; } ?>>
 
                                                 <input type="hidden" name="" class="form-control" id="balance_total"
                                                 placeholder="Balance" value="<?=$Balance_val?>">
@@ -527,7 +555,7 @@ if (strlen($_SESSION['alogin']) == "") {
 
                                         <div class="form-group col-md-6">
                                             <label for="payment_mode">Payment Mode</label>
-                                            <select name="payment_mode" id="payment_mode" class="form-control" required>
+                                            <select name="payment_mode" id="payment_mode" class="form-control" required <?php if($is_payment_complete) { echo 'disabled'; } ?>>
                                                 <option value="">Select Payment Mode</option>
                                                 <option value="Online">Online</option>
                                                 <option value="Cash">Cash</option>
@@ -539,13 +567,22 @@ if (strlen($_SESSION['alogin']) == "") {
                                         <div class="form-group col-md-12 error_message text-danger"></div>
                                     </div>
 
+                                    <?php if($is_payment_complete) { ?>
+                                    <div class="alert alert-success">
+                                        <i class="fas fa-check-circle"></i> <strong>Payment Complete!</strong> This candidate has paid the full amount. No further payments are required.
+                                    </div>
+                                    <?php } ?>
+
                                     <div class="form-row">
                                         <div class="form-group col-md-12">
-
+                                            <?php if(!$is_payment_complete) { ?>
                                             <button type="submit" name="submit" class="btn btn-primary" id="submit_btn">Make Payment</button>
-                                            <a href="manage-candidate.php" class="btn btn-danger">Skip</a>
+                                            <?php } else { ?>
+                                            <button type="button" class="btn btn-secondary" disabled>Payment Complete</button>
+                                            <?php } ?>
+                                            <a href="manage-candidate.php" class="btn btn-danger">Back to Candidates</a>
 
-                                            <button type="button" class="btn btn-success" onClick='p_all_data(<?php echo $last_id; ?>)' data-toggle="modal" data-target="#p_myModal">Print</td></button>
+                                            <button type="button" class="btn btn-success" onClick='p_all_data(<?php echo $last_id; ?>)' data-toggle="modal" data-target="#p_myModal">Print</button>
 
                                         </div>
                                     </div>
