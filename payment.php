@@ -417,13 +417,12 @@ if (strlen($_SESSION['alogin']) == "") {
             $Discount_val = '0';//$row['discount'];
             $Paid_val = $row['paid'];
             $total_fee= $row['total_fee'];
-            //if($row['balance'] == ''){
-             //   $Balance_val = $row['total_fee'];
-            //}else{
-                $Balance_val = $row['balance'];
-            //}
             
+            // Recalculate balance properly: total_fee - paid_amount
+            $Balance_val = $total_fee - $Paid_val;
             
+            // Ensure balance is not negative
+            if($Balance_val < 0) $Balance_val = 0;
         }
     } else {
         // If no payment record exists, create default values
@@ -437,10 +436,14 @@ if (strlen($_SESSION['alogin']) == "") {
     // Ensure all variables are set with fallback values
     if(!isset($payment_val)) $payment_val = 100;
     if(!isset($total_fee) || $total_fee == 0) $total_fee = $payment_val;
-    if(!isset($Balance_val)) $Balance_val = $total_fee - $Paid_val;
     if(!isset($Paid_val)) $Paid_val = 0;
     if(!isset($Discount_val)) $Discount_val = 0;
-    if(!isset($is_payment_complete)) $is_payment_complete = false;
+    
+    // Always recalculate balance to ensure accuracy
+    $Balance_val = $total_fee - $Paid_val;
+    if($Balance_val < 0) $Balance_val = 0;
+    
+    if(!isset($is_payment_complete)) $is_payment_complete = ($Paid_val >= $total_fee && $total_fee > 0);
 
 
 ?>
