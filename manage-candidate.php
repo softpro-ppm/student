@@ -103,15 +103,25 @@ if (strlen($_SESSION['alogin']) == "") {
                     <div class="card">
                         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Candidate Information</h5>
-                            <?php if(isset($_GET['batch'])){ ?>
-                                <a href="add-candidate-to-particular-batch.php?batchid=<?php echo $_GET['batch']; ?>" class="btn btn-success">
-                                    <i class="fas fa-plus"></i> Add Candidate
-                                </a>
-                            <?php } else { ?>
-                                <a href="add-candidate.php" class="btn btn-success">
-                                    <i class="fas fa-plus"></i> Add Candidate
-                                </a>
-                            <?php } ?>
+                            <div class="d-flex gap-2">
+                                <?php if($_SESSION['user_type'] == 1) { // Only for admin ?>
+                                    <a href="fix_payment_balance.php" class="btn btn-warning btn-sm" title="Fix Payment Balances">
+                                        <i class="fas fa-tools"></i> Fix Balances
+                                    </a>
+                                    <a href="pending_payment_approval.php" class="btn btn-info btn-sm" title="Pending Approvals">
+                                        <i class="fas fa-clock"></i> Pending Approvals
+                                    </a>
+                                <?php } ?>
+                                <?php if(isset($_GET['batch'])){ ?>
+                                    <a href="add-candidate-to-particular-batch.php?batchid=<?php echo $_GET['batch']; ?>" class="btn btn-success">
+                                        <i class="fas fa-plus"></i> Add Candidate
+                                    </a>
+                                <?php } else { ?>
+                                    <a href="add-candidate.php" class="btn btn-success">
+                                        <i class="fas fa-plus"></i> Add Candidate
+                                    </a>
+                                <?php } ?>
+                            </div>
                         </div>
                         <div class="card-body p-2">
                             <div class="table-responsive">

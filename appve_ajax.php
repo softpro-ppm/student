@@ -43,17 +43,39 @@ if(isset($_POST['bulk_approve']) && $_POST['bulk_approve'] == true) {
                 $query_check->execute();
 
                 if ($query_check->rowCount() == 1) {
-                    // Update payment table
-                    $sql1 = "UPDATE payment SET added_type = 1 WHERE candidate_id = :candidate_id AND added_type = 2";
-                    $stmt1 = $dbh->prepare($sql1);
-                    $stmt1->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-                    $stmt1->execute();
-
-                    // Update emi_list table
+                    // Update emi_list table first
                     $sql2 = "UPDATE emi_list SET added_type = 1 WHERE id = :id";
                     $stmt2 = $dbh->prepare($sql2);
                     $stmt2->bindParam(':id', $id, PDO::PARAM_INT);
                     $stmt2->execute();
+
+                    // Recalculate total paid amount for this candidate (only approved payments)
+                    $sql_total_paid = "SELECT SUM(paid) as total_paid FROM emi_list WHERE candidate_id = :candidate_id AND added_type = 1";
+                    $stmt_total = $dbh->prepare($sql_total_paid);
+                    $stmt_total->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+                    $stmt_total->execute();
+                    $total_paid_result = $stmt_total->fetch(PDO::FETCH_ASSOC);
+                    $total_paid = $total_paid_result['total_paid'] ?? 0;
+
+                    // Get current total fee
+                    $sql_get_fee = "SELECT total_fee FROM payment WHERE candidate_id = :candidate_id";
+                    $stmt_fee = $dbh->prepare($sql_get_fee);
+                    $stmt_fee->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+                    $stmt_fee->execute();
+                    $fee_result = $stmt_fee->fetch(PDO::FETCH_ASSOC);
+                    $total_fee = $fee_result['total_fee'] ?? 0;
+
+                    // Calculate new balance
+                    $new_balance = $total_fee - $total_paid;
+                    $new_balance = max(0, $new_balance); // Ensure balance doesn't go negative
+
+                    // Update payment table with new values
+                    $sql1 = "UPDATE payment SET added_type = 1, paid = :paid, balance = :balance WHERE candidate_id = :candidate_id";
+                    $stmt1 = $dbh->prepare($sql1);
+                    $stmt1->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+                    $stmt1->bindParam(':paid', $total_paid, PDO::PARAM_STR);
+                    $stmt1->bindParam(':balance', $new_balance, PDO::PARAM_STR);
+                    $stmt1->execute();
 
                     $approved_count++;
                 } else {
@@ -121,20 +143,40 @@ if(isset($_POST['candidate_id'])) {
 
                                                         
         if ($query->rowCount() == 1) {
-            // Update first table (full_texts)
-            $sql1 = "UPDATE payment SET added_type = 1 WHERE candidate_id = :candidate_id";
+            // Update emi_list table first
+            $sql2 = "UPDATE emi_list SET added_type = 1 WHERE id = :id";
+            $stmt2 = $dbh->prepare($sql2);
+            $stmt2->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt2->execute();
+
+            // Recalculate total paid amount for this candidate (only approved payments)
+            $sql_total_paid = "SELECT SUM(paid) as total_paid FROM emi_list WHERE candidate_id = :candidate_id AND added_type = 1";
+            $stmt_total = $dbh->prepare($sql_total_paid);
+            $stmt_total->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+            $stmt_total->execute();
+            $total_paid_result = $stmt_total->fetch(PDO::FETCH_ASSOC);
+            $total_paid = $total_paid_result['total_paid'] ?? 0;
+
+            // Get current total fee
+            $sql_get_fee = "SELECT total_fee FROM payment WHERE candidate_id = :candidate_id";
+            $stmt_fee = $dbh->prepare($sql_get_fee);
+            $stmt_fee->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+            $stmt_fee->execute();
+            $fee_result = $stmt_fee->fetch(PDO::FETCH_ASSOC);
+            $total_fee = $fee_result['total_fee'] ?? 0;
+
+            // Calculate new balance
+            $new_balance = $total_fee - $total_paid;
+            $new_balance = max(0, $new_balance); // Ensure balance doesn't go negative
+
+            // Update payment table with new values
+            $sql1 = "UPDATE payment SET added_type = 1, paid = :paid, balance = :balance WHERE candidate_id = :candidate_id";
             $stmt1 = $dbh->prepare($sql1);
             $stmt1->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+            $stmt1->bindParam(':paid', $total_paid, PDO::PARAM_STR);
+            $stmt1->bindParam(':balance', $new_balance, PDO::PARAM_STR);
             $stmt1->execute();
         }
-
-        
-
-        // Update second table (second_table)
-        $sql2 = "UPDATE emi_list SET added_type = 1 WHERE id = :id";
-        $stmt2 = $dbh->prepare($sql2);
-        $stmt2->bindParam(':id', $id, PDO::PARAM_INT);
-        $stmt2->execute();
 
         // Commit the transaction if both updates are successful
         $dbh->commit();
