@@ -405,15 +405,24 @@ function bulkApprove() {
                 if(response.status === 'success'){
                     alert(`Successfully approved ${response.approved_count} record(s)!`);
                     window.location.reload();
+                } else if(response.status === 'partial_success') {
+                    alert(`Partial success: ${response.message}\nCheck console for details.`);
+                    console.log('Detailed errors:', response.errors);
+                    window.location.reload();
                 } else {
                     alert('Bulk approval failed: ' + response.message);
+                    if(response.errors && response.errors.length > 0) {
+                        console.log('Detailed errors:', response.errors);
+                    }
                     bulkApproveBtn.disabled = false;
                     bulkApproveBtn.innerHTML = originalText;
                 }
             },
             error: function(xhr, status, error) {
                 console.error('AJAX Error:', error);
-                alert('An error occurred during bulk approval.');
+                console.error('Response Text:', xhr.responseText);
+                console.error('Status:', status);
+                alert('An error occurred during bulk approval. Check console for details.');
                 bulkApproveBtn.disabled = false;
                 bulkApproveBtn.innerHTML = originalText;
             }

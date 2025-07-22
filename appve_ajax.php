@@ -4,6 +4,10 @@ include('includes/config.php');
 
 header('Content-Type: application/json');
 
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Don't display errors in output, but log them
+
 // Check if this is a bulk approval request
 if(isset($_POST['bulk_approve']) && $_POST['bulk_approve'] == true) {
     if(!isset($_POST['items']) || empty($_POST['items'])) {
@@ -21,8 +25,14 @@ if(isset($_POST['bulk_approve']) && $_POST['bulk_approve'] == true) {
         $dbh->beginTransaction();
 
         foreach($items as $item) {
-            $candidate_id = $item['candidate_id'];
-            $id = $item['id'];
+            $candidate_id = isset($item['candidate_id']) ? $item['candidate_id'] : null;
+            $id = isset($item['id']) ? $item['id'] : null;
+
+            if(!$candidate_id || !$id) {
+                $failed_count++;
+                $errors[] = "Missing candidate_id or id in item";
+                continue;
+            }
 
             try {
                 // Check if record exists in emi_list
@@ -34,7 +44,7 @@ if(isset($_POST['bulk_approve']) && $_POST['bulk_approve'] == true) {
 
                 if ($query_check->rowCount() == 1) {
                     // Update payment table
-                    $sql1 = "UPDATE payment SET added_type = 1 WHERE candidate_id = :candidate_id";
+                    $sql1 = "UPDATE payment SET added_type = 1 WHERE candidate_id = :candidate_id AND added_type = 2";
                     $stmt1 = $dbh->prepare($sql1);
                     $stmt1->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
                     $stmt1->execute();
@@ -48,7 +58,7 @@ if(isset($_POST['bulk_approve']) && $_POST['bulk_approve'] == true) {
                     $approved_count++;
                 } else {
                     $failed_count++;
-                    $errors[] = "Record not found for candidate ID: $candidate_id";
+                    $errors[] = "Record not found for candidate ID: $candidate_id, EMI ID: $id";
                 }
             } catch(PDOException $e) {
                 $failed_count++;
@@ -56,19 +66,29 @@ if(isset($_POST['bulk_approve']) && $_POST['bulk_approve'] == true) {
             }
         }
 
-        // Commit the transaction if no errors
-        if($failed_count == 0) {
+        // Commit the transaction if there are approved records
+        if($approved_count > 0) {
             $dbh->commit();
-            echo json_encode([
-                'status' => 'success', 
-                'approved_count' => $approved_count,
-                'message' => "Successfully approved $approved_count record(s)."
-            ]);
+            if($failed_count == 0) {
+                echo json_encode([
+                    'status' => 'success', 
+                    'approved_count' => $approved_count,
+                    'message' => "Successfully approved $approved_count record(s)."
+                ]);
+            } else {
+                echo json_encode([
+                    'status' => 'partial_success', 
+                    'approved_count' => $approved_count,
+                    'failed_count' => $failed_count,
+                    'message' => "Approved: $approved_count, Failed: $failed_count record(s).",
+                    'errors' => $errors
+                ]);
+            }
         } else {
             $dbh->rollBack();
             echo json_encode([
                 'status' => 'error', 
-                'message' => "Some records failed to process. Approved: $approved_count, Failed: $failed_count",
+                'message' => "No records were approved. Failed: $failed_count",
                 'errors' => $errors
             ]);
         }
@@ -76,14 +96,16 @@ if(isset($_POST['bulk_approve']) && $_POST['bulk_approve'] == true) {
     } catch(PDOException $e) {
         // Roll back the transaction if something failed
         $dbh->rollBack();
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+    } catch(Exception $e) {
+        // Handle any other exceptions
+        echo json_encode(['status' => 'error', 'message' => 'General error: ' . $e->getMessage()]);
     }
     
     exit;
 }
 
 // Check if candidate_id is provided for single approval
-if(isset($_POST['candidate_id'])) {
 if(isset($_POST['candidate_id'])) {
     $candidate_id = $_POST['candidate_id'];
     $id = $_POST['id'];
