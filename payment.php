@@ -344,77 +344,13 @@ if (strlen($_SESSION['alogin']) == "") {
     }
 }
 
-
-    $candidate_id = $last_id;
-    $checkSql = "SELECT * FROM payment WHERE candidate_id = :candidate_id";
-    $checkQuery = $dbh->prepare($checkSql);
-    $checkQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-    $checkQuery->execute();
-    
-    // Fetch all rows associated with the candidate_id
-    $result_new = $checkQuery->fetchAll(PDO::FETCH_ASSOC);
-
-    // If no payment record exists, create one automatically
-    if (empty($result_new)) {
-        try {
-            $today = date('Y-m-d');
-            $insertSql = "INSERT INTO payment (
-                enrollmentid, candidate_id, discount, paid, balance, total_fee, created_at, added_type
-            ) VALUES (
-                :enrollmentid, :candidate_id, :discount, :paid, :balance, :total_fee, :created_at, :added_type
-            )";
-            
-            $insertQuery = $dbh->prepare($insertSql);
-            $insertQuery->bindParam(':enrollmentid', $enroll, PDO::PARAM_STR);
-            $insertQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-            $insertQuery->bindParam(':discount', $discount = 0, PDO::PARAM_STR);
-            $insertQuery->bindParam(':paid', $paid = 0, PDO::PARAM_STR);
-            $insertQuery->bindParam(':balance', $payment_val, PDO::PARAM_STR);
-            $insertQuery->bindParam(':total_fee', $payment_val, PDO::PARAM_STR);
-            $insertQuery->bindParam(':created_at', $today, PDO::PARAM_STR);
-            $insertQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
-            $insertQuery->execute();
-            
-            // Re-fetch the payment record
-            $checkQuery->execute();
-            $result_new = $checkQuery->fetchAll(PDO::FETCH_ASSOC);
-        } catch(PDOException $e) {
-            error_log("Failed to create payment record for candidate ID $candidate_id: " . $e->getMessage());
-        }
-    }
-
-    if (!empty($result_new)) {
-        // Candidate exists, show the data
-        foreach ($result_new as $row) {
-            $Discount_val = '0';//$row['discount'];
-            $Paid_val = $row['paid'];
-            $total_fee= $row['total_fee'];
-            
-            // Recalculate balance properly: total_fee - paid_amount
-            $Balance_val = $total_fee - $Paid_val;
-            
-            // Ensure balance is not negative
-            if($Balance_val < 0) $Balance_val = 0;
-        }
-    } else {
-        // If no payment record exists, create default values
-        if(!isset($payment_val)) $payment_val = 100;
-        if(!isset($total_fee)) $total_fee = $payment_val;
-        if(!isset($Balance_val)) $Balance_val = $payment_val;
-        if(!isset($Paid_val)) $Paid_val = 0;
-        if(!isset($Discount_val)) $Discount_val = 0;
-    }
-
-    // Ensure all variables are set with fallback values
+    // Ensure variables are properly set for form display
     if(!isset($payment_val)) $payment_val = 100;
     if(!isset($total_fee) || $total_fee == 0) $total_fee = $payment_val;
     if(!isset($Paid_val)) $Paid_val = 0;
     if(!isset($Discount_val)) $Discount_val = 0;
-    
-    // Always recalculate balance to ensure accuracy
-    $Balance_val = $total_fee - $Paid_val;
+    if(!isset($Balance_val)) $Balance_val = $total_fee - $Paid_val;
     if($Balance_val < 0) $Balance_val = 0;
-    
     if(!isset($is_payment_complete)) $is_payment_complete = ($Paid_val >= $total_fee && $total_fee > 0);
 
 
@@ -523,6 +459,17 @@ if (strlen($_SESSION['alogin']) == "") {
                             <div class="table-responsive">
                                 <form method="post" enctype="multipart/form-data">
                                     <input type="hidden" name="candidate_id"  required="required" value="<?=$_GET['last_id']?>">
+
+                                    <!-- Debug Variables (Remove after testing) -->
+                                    <div class="alert alert-warning mb-3">
+                                        <small>
+                                            payment_val: <?= $payment_val ?? 'NULL' ?> | 
+                                            total_fee: <?= $total_fee ?? 'NULL' ?> | 
+                                            Balance_val: <?= $Balance_val ?? 'NULL' ?> | 
+                                            jobid: <?= $jobid ?? 'NULL' ?> |
+                                            candidate found: <?= isset($results) ? 'YES' : 'NO' ?>
+                                        </small>
+                                    </div>>
 
                                     <div class="form-row">
                                         <div class="form-group col-md-6">
