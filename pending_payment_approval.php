@@ -116,10 +116,25 @@ if (strlen($_SESSION['alogin']) == "") {
                 </div>
             <?php } ?>
 
+            <!-- Bulk Action Button -->
+            <?php if($_SESSION['user_type']==1) { ?>
+            <div class="mb-3">
+                <button id="bulkApproveBtn" class="btn btn-success" style="display: none;" onclick="bulkApprove()">
+                    <i class="fas fa-check-circle"></i> Approve Selected
+                </button>
+                <span id="selectedCount" class="text-muted ms-2" style="display: none;">0 items selected</span>
+            </div>
+            <?php } ?>
+
             <div class="table-responsive">
                 <table id="example" class="table table-striped table-hover" style="width:100%">
                     <thead>
                         <tr>
+                            <?php if($_SESSION['user_type']==1) { ?>
+                            <th class="text-center">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                            </th>
+                            <?php } ?>
                             <th>#</th>
                             <th>Enrollment ID</th>
                             <th>Name</th>
@@ -171,6 +186,13 @@ if (strlen($_SESSION['alogin']) == "") {
 
                         ?>
                     <tr>
+                        <?php if($_SESSION['user_type']==1) { ?>
+                        <td class="text-center">
+                            <input type="checkbox" class="row-checkbox" 
+                                   value="<?php echo htmlentities($result->candidate_id); ?>_<?php echo htmlentities($result->id); ?>" 
+                                   onchange="updateBulkActionButton()">
+                        </td>
+                        <?php } ?>
                         <td><?php echo htmlentities($cnt); ?></td>
                         <td><?php echo htmlentities($results_c[0]->enrollmentid); ?></td>
                         <td><?php echo htmlentities($results_c[0]->candidatename); ?></td>
@@ -223,6 +245,30 @@ if (strlen($_SESSION['alogin']) == "") {
 
 <script>
 $(document).ready(function() {
+    <?php if($_SESSION['user_type']==1) { ?>
+    $('#example').DataTable({
+        "order": [[1, "asc"]],
+        "pageLength": 10,
+        "responsive": true,
+        "columnDefs": [
+            { className: "text-center", targets: [0] },
+            { className: "text-end", targets: [4,5,6,7] },
+            { className: "text-center", targets: [9] },
+            { orderable: false, targets: [0] }
+        ],
+        "language": {
+            "search": "Search:",
+            "lengthMenu": "Show _MENU_ entries",
+            "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "paginate": {
+                "first": "First",
+                "last": "Last",
+                "next": "Next",
+                "previous": "Previous"
+            }
+        }
+    });
+    <?php } else { ?>
     $('#example').DataTable({
         "order": [[0, "asc"]],
         "pageLength": 10,
@@ -243,6 +289,7 @@ $(document).ready(function() {
             }
         }
     });
+    <?php } ?>
 });
 </script>
 </body>
@@ -272,6 +319,103 @@ function updateStatus(candidateId,id) {
             error: function(xhr, status, error) {
                 console.error('AJAX Error:', error);
                 alert('An error occurred while updating the status.');
+            }
+        });
+    }
+}
+
+// Function to toggle select all checkbox
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    
+    rowCheckboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    
+    updateBulkActionButton();
+}
+
+// Function to update bulk action button visibility
+function updateBulkActionButton() {
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    const bulkApproveBtn = document.getElementById('bulkApproveBtn');
+    const selectedCount = document.getElementById('selectedCount');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    
+    if (checkedBoxes.length > 0) {
+        bulkApproveBtn.style.display = 'inline-block';
+        selectedCount.style.display = 'inline';
+        selectedCount.textContent = checkedBoxes.length + ' item(s) selected';
+    } else {
+        bulkApproveBtn.style.display = 'none';
+        selectedCount.style.display = 'none';
+    }
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.row-checkbox');
+    if (checkedBoxes.length === allCheckboxes.length && allCheckboxes.length > 0) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+    } else if (checkedBoxes.length > 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+    } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    }
+}
+
+// Function to handle bulk approval
+function bulkApprove() {
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        alert('Please select at least one record to approve.');
+        return;
+    }
+    
+    // Ask for confirmation
+    if (confirm(`Are you sure you want to approve ${checkedBoxes.length} selected record(s)?`)) {
+        const selectedItems = [];
+        
+        checkedBoxes.forEach(checkbox => {
+            const value = checkbox.value.split('_');
+            selectedItems.push({
+                candidate_id: value[0],
+                id: value[1]
+            });
+        });
+        
+        // Disable button during processing
+        const bulkApproveBtn = document.getElementById('bulkApproveBtn');
+        const originalText = bulkApproveBtn.innerHTML;
+        bulkApproveBtn.disabled = true;
+        bulkApproveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        $.ajax({
+            url: 'appve_ajax.php',
+            type: 'POST',
+            data: { 
+                bulk_approve: true,
+                items: selectedItems
+            },
+            dataType: 'json',
+            success: function(response) {
+                if(response.status === 'success'){
+                    alert(`Successfully approved ${response.approved_count} record(s)!`);
+                    window.location.reload();
+                } else {
+                    alert('Bulk approval failed: ' + response.message);
+                    bulkApproveBtn.disabled = false;
+                    bulkApproveBtn.innerHTML = originalText;
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                alert('An error occurred during bulk approval.');
+                bulkApproveBtn.disabled = false;
+                bulkApproveBtn.innerHTML = originalText;
             }
         });
     }
@@ -472,6 +616,57 @@ document.addEventListener('DOMContentLoaded', function() {
     background: #00c1d4 !important;
     border-color: #00c1d4 !important;
     color: white !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #00c1d4 !important;
+    border-color: #00c1d4 !important;
+    color: white !important;
+}
+
+/* Checkbox Styles */
+.row-checkbox, #selectAll {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.row-checkbox:checked, #selectAll:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+/* Bulk Action Button */
+#bulkApproveBtn {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    border: none;
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+#bulkApproveBtn:hover:not(:disabled) {
+    background: linear-gradient(45deg, #20c997, #28a745);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+#bulkApproveBtn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+/* Selected count styling */
+#selectedCount {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
 }
 
 /* Utility Classes */
