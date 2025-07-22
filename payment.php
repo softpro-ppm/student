@@ -28,22 +28,47 @@ if (strlen($_SESSION['alogin']) == "") {
 
     $candidate_id = $last_id;
 
+    // Get candidate information first
+    $sql = "SELECT * FROM tblcandidate WHERE CandidateId = :candidate_id"; 
+    $query = $dbh->prepare($sql);
+    $query->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+    $query->execute();
+    $results = $query->fetch(PDO::FETCH_ASSOC);
 
+    // Check if candidate exists
+    if ($results) {
+        $enroll = $results['enrollmentid'];
+        $jobid = $results['job_roll'] ?? 0;
+    } else {
+        echo "<script>alert('Candidate not found!'); window.location.href='manage-candidate.php';</script>";
+        exit;
+    }
 
+    // Get job roll payment amount
+    $sql4 = "SELECT JobrollId, payment FROM tbljobroll WHERE JobrollId = :jobid";
+    $query4 = $dbh->prepare($sql4);
+    $query4->bindParam(':jobid', $jobid, PDO::PARAM_INT);
+    $query4->execute();
+    $result4 = $query4->fetch(PDO::FETCH_ASSOC);
 
+    // Calculate total payment value (registration + course fee)
+    $payment_val = 100; // Default registration fee
+    if ($result4 && isset($result4['payment'])) {
+        $payment_val = $result4['payment']; // This already includes registration fee
+    }
+
+    // Check for existing payment record
     $checkSql = "SELECT * FROM payment WHERE candidate_id = :candidate_id";
     $checkQuery = $dbh->prepare($checkSql);
     $checkQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
     $checkQuery->execute();
-    
-    // Fetch all rows associated with the candidate_id
     $result = $checkQuery->fetchAll(PDO::FETCH_ASSOC);
 
-    // Initialize default values
-    $Balance_val = 0;
-    $total_fee = 0;
+    // Initialize variables
+    $total_fee = $payment_val;
     $Discount_val = 0;
     $Paid_val = 0;
+    $Balance_val = $payment_val;
 
     if (!empty($result)) {
         // Candidate exists, show the data
@@ -318,59 +343,6 @@ if (strlen($_SESSION['alogin']) == "") {
         echo "Error: " . $e->getMessage();
     }
 }
-    
-    // SQL query to fetch the candidate data
-    $sql = "SELECT * FROM tblcandidate WHERE CandidateId = '$last_id' "; 
-    
-    $query = $dbh->prepare($sql);
-    $query->execute();
-    $results = $query->fetch(PDO::FETCH_ASSOC);
-
-    // Check if a result was found
-    if ($results) {
-        $enroll = $results['enrollmentid'];
-    } else {
-        $enroll = "No records found.";
-        // If no candidate found, redirect back
-        echo "<script>alert('Candidate not found!'); window.location.href='manage-candidate.php';</script>";
-        exit;
-    }
-
-
-    $last_id = $_GET['last_id'];
-    // SQL query to fetch the candidate data for job_roll
-    $sql1 = "SELECT CandidateId, job_roll FROM tblcandidate WHERE CandidateId = '$last_id' "; 
-    $query1 = $dbh->prepare($sql1);
-    $query1->execute();
-    $result1 = $query1->fetch(PDO::FETCH_ASSOC);
-    $jobid = $result1['job_roll'] ?? 0;
-
-
-    // SQL query to fetch the job roll payment
-    $sql4 = "SELECT JobrollId, payment FROM tbljobroll WHERE JobrollId = :jobid";
-    $query4 = $dbh->prepare($sql4);
-
-    // Bind parameter to prevent SQL injection
-    $query4->bindParam(':jobid', $jobid, PDO::PARAM_INT);
-
-    // Execute the query
-    $query4->execute();
-
-    // Fetch the first row
-    $result4 = $query4->fetch(PDO::FETCH_ASSOC);
-
-    // Initialize payment_val with default values
-    $payment_val = 100; // Default registration fee
-
-    if ($result4 && isset($result4['payment'])) {
-        $payment_val = $result4['payment'];
-        if($total_fee =='0'){
-            $Balance_val = $result4['payment'];
-        }
-    } else {
-        // If no job roll payment found, set default
-        $payment_val = 100; // Just registration fee
-    }
 
 
     $candidate_id = $last_id;
@@ -551,57 +523,6 @@ if (strlen($_SESSION['alogin']) == "") {
                             <div class="table-responsive">
                                 <form method="post" enctype="multipart/form-data">
                                     <input type="hidden" name="candidate_id"  required="required" value="<?=$_GET['last_id']?>">
-
-                                    <!-- Temporary Debug for Form Loading -->
-                                    <?php if(!isset($_GET['hide_debug'])) { ?>
-                                    <div class="alert alert-info">
-                                        <strong>Debug Info:</strong> 
-                                        Payment Val: <?= isset($payment_val) ? $payment_val : 'NOT SET' ?> | 
-                                        Total Fee: <?= isset($total_fee) ? $total_fee : 'NOT SET' ?> | 
-                                        Balance: <?= isset($Balance_val) ? $Balance_val : 'NOT SET' ?> |
-                                        Job ID: <?= isset($jobid) ? $jobid : 'NOT SET' ?> |
-                                        Candidate Found: <?= isset($results['candidatename']) ? 'YES' : 'NO' ?>
-                                        <div class="mt-2">
-                                            <a href="?last_id=<?= $_GET['last_id'] ?>&hide_debug=1" class="btn btn-sm btn-secondary">Hide Debug</a>
-                                            <a href="?last_id=<?= $_GET['last_id'] ?>&refresh=1" class="btn btn-sm btn-warning">Refresh Data</a>
-                                        </div>
-                                    </div>
-                                    <?php } ?>
-
-                                    <!-- Debug Information -->
-                                    <?php if(isset($_GET['debug']) && $_SESSION['user_type'] == 1) { 
-                                        // Calculate approved payments for debug
-                                        $debug_sql = "SELECT SUM(paid) as approved_total FROM emi_list WHERE candidate_id = :candidate_id AND added_type = 1";
-                                        $debug_query = $dbh->prepare($debug_sql);
-                                        $debug_query->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-                                        $debug_query->execute();
-                                        $debug_result = $debug_query->fetch(PDO::FETCH_ASSOC);
-                                        $debug_approved = $debug_result['approved_total'] ?? 0;
-                                        
-                                        $debug_pending_sql = "SELECT SUM(paid) as pending_total FROM emi_list WHERE candidate_id = :candidate_id AND added_type = 2";
-                                        $debug_pending_query = $dbh->prepare($debug_pending_sql);
-                                        $debug_pending_query->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-                                        $debug_pending_query->execute();
-                                        $debug_pending_result = $debug_pending_query->fetch(PDO::FETCH_ASSOC);
-                                        $debug_pending = $debug_pending_result['pending_total'] ?? 0;
-                                    ?>
-                                    <div class="alert alert-info">
-                                        <h6><i class="fas fa-bug"></i> Debug Information</h6>
-                                        <div class="row">
-                                            <div class="col-md-3"><strong>Total Fee:</strong> ₹<?= $total_fee ?></div>
-                                            <div class="col-md-3"><strong>Approved Payments:</strong> ₹<?= $debug_approved ?></div>
-                                            <div class="col-md-3"><strong>Pending Payments:</strong> ₹<?= $debug_pending ?></div>
-                                            <div class="col-md-3"><strong>Current Balance:</strong> ₹<?= $Balance_val ?></div>
-                                        </div>
-                                        <div class="mt-2">
-                                            <strong>Calculated Balance:</strong> ₹<?= ($total_fee - $debug_approved) ?>
-                                            <?php if(($total_fee - $debug_approved) != $Balance_val) { ?>
-                                                <span class="text-danger">⚠️ Mismatch detected!</span>
-                                                <a href="fix_payment_balance.php?debug=1&candidate_id=<?= $candidate_id ?>" class="btn btn-warning btn-sm ml-2">Fix This</a>
-                                            <?php } ?>
-                                        </div>
-                                    </div>
-                                    <?php } ?>
 
                                     <div class="form-row">
                                         <div class="form-group col-md-6">
