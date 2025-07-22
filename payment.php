@@ -11,7 +11,20 @@ if (strlen($_SESSION['alogin']) == "") {
 
     $last_id = $_GET['last_id'];
 
-
+    // Handle refresh request
+    if(isset($_GET['refresh'])) {
+        // Delete existing payment record and recreate
+        try {
+            $deleteSql = "DELETE FROM payment WHERE candidate_id = :candidate_id";
+            $deleteQuery = $dbh->prepare($deleteSql);
+            $deleteQuery->bindParam(':candidate_id', $last_id, PDO::PARAM_INT);
+            $deleteQuery->execute();
+            
+            $msg = "Payment data refreshed successfully!";
+        } catch(PDOException $e) {
+            $error = "Error refreshing payment data: " . $e->getMessage();
+        }
+    }
 
     $candidate_id = $last_id;
 
@@ -306,33 +319,34 @@ if (strlen($_SESSION['alogin']) == "") {
     }
 }
     
-    // SQL query to fetch the last enrollmentid
-    $sql = "SELECT * FROM tblcandidate WHERE CandidateId = '$last_id' "; // Replace 'id' with the actual primary key or a unique column
+    // SQL query to fetch the candidate data
+    $sql = "SELECT * FROM tblcandidate WHERE CandidateId = '$last_id' "; 
     
     $query = $dbh->prepare($sql);
     $query->execute();
     $results = $query->fetch(PDO::FETCH_ASSOC);
 
-    //print_r($results); die;
-    
     // Check if a result was found
     if ($results) {
         $enroll = $results['enrollmentid'];
     } else {
         $enroll = "No records found.";
+        // If no candidate found, redirect back
+        echo "<script>alert('Candidate not found!'); window.location.href='manage-candidate.php';</script>";
+        exit;
     }
 
 
     $last_id = $_GET['last_id'];
-    // SQL query to fetch the last enrollmentid
-    $sql1 = "SELECT CandidateId,jobid FROM tblcandidate WHERE CandidateId = '$last_id' "; // Replace 'id' with the 
-    $query = $dbh->prepare($sql);
-    $query->execute();
-    $result = $query->fetch(PDO::FETCH_ASSOC);
-    $jobid = $result['job_roll'];
+    // SQL query to fetch the candidate data for job_roll
+    $sql1 = "SELECT CandidateId, job_roll FROM tblcandidate WHERE CandidateId = '$last_id' "; 
+    $query1 = $dbh->prepare($sql1);
+    $query1->execute();
+    $result1 = $query1->fetch(PDO::FETCH_ASSOC);
+    $jobid = $result1['job_roll'] ?? 0;
 
 
-    // SQL query to fetch the last tbljobroll
+    // SQL query to fetch the job roll payment
     $sql4 = "SELECT JobrollId, payment FROM tbljobroll WHERE JobrollId = :jobid";
     $query4 = $dbh->prepare($sql4);
 
@@ -345,14 +359,17 @@ if (strlen($_SESSION['alogin']) == "") {
     // Fetch the first row
     $result4 = $query4->fetch(PDO::FETCH_ASSOC);
 
+    // Initialize payment_val with default values
+    $payment_val = 100; // Default registration fee
+
     if ($result4 && isset($result4['payment'])) {
         $payment_val = $result4['payment'];
         if($total_fee =='0'){
             $Balance_val = $result4['payment'];
         }
-
     } else {
-       // echo "No payment record found for JobrollId: " . htmlspecialchars($jobid);
+        // If no job roll payment found, set default
+        $payment_val = 100; // Just registration fee
     }
 
 
@@ -364,6 +381,35 @@ if (strlen($_SESSION['alogin']) == "") {
     
     // Fetch all rows associated with the candidate_id
     $result_new = $checkQuery->fetchAll(PDO::FETCH_ASSOC);
+
+    // If no payment record exists, create one automatically
+    if (empty($result_new)) {
+        try {
+            $today = date('Y-m-d');
+            $insertSql = "INSERT INTO payment (
+                enrollmentid, candidate_id, discount, paid, balance, total_fee, created_at, added_type
+            ) VALUES (
+                :enrollmentid, :candidate_id, :discount, :paid, :balance, :total_fee, :created_at, :added_type
+            )";
+            
+            $insertQuery = $dbh->prepare($insertSql);
+            $insertQuery->bindParam(':enrollmentid', $enroll, PDO::PARAM_STR);
+            $insertQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+            $insertQuery->bindParam(':discount', $discount = 0, PDO::PARAM_STR);
+            $insertQuery->bindParam(':paid', $paid = 0, PDO::PARAM_STR);
+            $insertQuery->bindParam(':balance', $payment_val, PDO::PARAM_STR);
+            $insertQuery->bindParam(':total_fee', $payment_val, PDO::PARAM_STR);
+            $insertQuery->bindParam(':created_at', $today, PDO::PARAM_STR);
+            $insertQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
+            $insertQuery->execute();
+            
+            // Re-fetch the payment record
+            $checkQuery->execute();
+            $result_new = $checkQuery->fetchAll(PDO::FETCH_ASSOC);
+        } catch(PDOException $e) {
+            error_log("Failed to create payment record for candidate ID $candidate_id: " . $e->getMessage());
+        }
+    }
 
     if (!empty($result_new)) {
         // Candidate exists, show the data
@@ -379,7 +425,22 @@ if (strlen($_SESSION['alogin']) == "") {
             
             
         }
+    } else {
+        // If no payment record exists, create default values
+        if(!isset($payment_val)) $payment_val = 100;
+        if(!isset($total_fee)) $total_fee = $payment_val;
+        if(!isset($Balance_val)) $Balance_val = $payment_val;
+        if(!isset($Paid_val)) $Paid_val = 0;
+        if(!isset($Discount_val)) $Discount_val = 0;
     }
+
+    // Ensure all variables are set with fallback values
+    if(!isset($payment_val)) $payment_val = 100;
+    if(!isset($total_fee) || $total_fee == 0) $total_fee = $payment_val;
+    if(!isset($Balance_val)) $Balance_val = $total_fee - $Paid_val;
+    if(!isset($Paid_val)) $Paid_val = 0;
+    if(!isset($Discount_val)) $Discount_val = 0;
+    if(!isset($is_payment_complete)) $is_payment_complete = false;
 
 
 ?>
@@ -488,6 +549,22 @@ if (strlen($_SESSION['alogin']) == "") {
                                 <form method="post" enctype="multipart/form-data">
                                     <input type="hidden" name="candidate_id"  required="required" value="<?=$_GET['last_id']?>">
 
+                                    <!-- Temporary Debug for Form Loading -->
+                                    <?php if(!isset($_GET['hide_debug'])) { ?>
+                                    <div class="alert alert-info">
+                                        <strong>Debug Info:</strong> 
+                                        Payment Val: <?= isset($payment_val) ? $payment_val : 'NOT SET' ?> | 
+                                        Total Fee: <?= isset($total_fee) ? $total_fee : 'NOT SET' ?> | 
+                                        Balance: <?= isset($Balance_val) ? $Balance_val : 'NOT SET' ?> |
+                                        Job ID: <?= isset($jobid) ? $jobid : 'NOT SET' ?> |
+                                        Candidate Found: <?= isset($results['candidatename']) ? 'YES' : 'NO' ?>
+                                        <div class="mt-2">
+                                            <a href="?last_id=<?= $_GET['last_id'] ?>&hide_debug=1" class="btn btn-sm btn-secondary">Hide Debug</a>
+                                            <a href="?last_id=<?= $_GET['last_id'] ?>&refresh=1" class="btn btn-sm btn-warning">Refresh Data</a>
+                                        </div>
+                                    </div>
+                                    <?php } ?>
+
                                     <!-- Debug Information -->
                                     <?php if(isset($_GET['debug']) && $_SESSION['user_type'] == 1) { 
                                         // Calculate approved payments for debug
@@ -542,17 +619,17 @@ if (strlen($_SESSION['alogin']) == "") {
                                             <label for="candidatename">Full Name</label>
                                             <input type="text" name="candidatename" class="form-control"
                                                 id="candidatename" required="required"
-                                                placeholder="Enter Full Name" value="<?=$results['candidatename']; ?>">
+                                                placeholder="Enter Full Name" value="<?= isset($results['candidatename']) ? $results['candidatename'] : ''; ?>">
                                         </div>
 
                                         <input type="hidden" name="phone" class="form-control"
-                                                id="phone" required="required" value="<?=$results['phonenumber']; ?>">
+                                                id="phone" required="required" value="<?= isset($results['phonenumber']) ? $results['phonenumber'] : ''; ?>">
 
                                         <div class="form-group col-md-6">
                                             <label for="fathername">Father Name</label>
                                             <input type="text" name="fathername" required="required"
                                                 class="form-control" id="fathername"
-                                                placeholder="Enter Father Name" value="<?=$results['fathername']; ?>">
+                                                placeholder="Enter Father Name" value="<?= isset($results['fathername']) ? $results['fathername'] : ''; ?>">
                                         </div>
                                     </div>
 
@@ -561,7 +638,7 @@ if (strlen($_SESSION['alogin']) == "") {
                                         <div class="form-group col-md-6">
                                             <label for="village">Village</label>
                                             <input type="text" name="village" class="form-control" id="village"
-                                                placeholder="Village" value="<?=$results['village']; ?>">
+                                                placeholder="Village" value="<?= isset($results['village']) ? $results['village'] : ''; ?>">
                                         </div>
                                     </div>
 
