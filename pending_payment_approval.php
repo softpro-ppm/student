@@ -140,9 +140,9 @@ if (strlen($_SESSION['alogin']) == "") {
                             <th>Name</th>
                             <th>Job Roll</th>
                             <th class="text-end">Total Fee</th>
-                            <th class="text-end">Paid</th>
-                            <th class="text-end">Balance</th>
-                            <th class="text-end">Last Paid</th>
+                            <th class="text-end">Approved Paid</th>
+                            <th class="text-end">Remaining Balance</th>
+                            <th class="text-end">Current Payment</th>
                             <th>Updated On</th>
                             <th class="text-center">Action</th>
                         </tr>
@@ -166,6 +166,17 @@ if (strlen($_SESSION['alogin']) == "") {
                                     $query_p->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
                                     $query_p->execute();
                                     $results_p = $query_p->fetch(PDO::FETCH_OBJ);
+
+                                    // Calculate approved payments only (excluding current pending)
+                                    $sql_approved = "SELECT SUM(e.paid) as approved_total FROM emi_list e WHERE e.candidate_id = :candidate_id AND e.added_type = 1";
+                                    $query_approved = $dbh->prepare($sql_approved);
+                                    $query_approved->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+                                    $query_approved->execute();
+                                    $approved_result = $query_approved->fetch(PDO::FETCH_OBJ);
+                                    $approved_paid = $approved_result->approved_total ?? 0;
+
+                                    // Calculate correct balance: Total Fee - Approved Payments - Current Pending Payment
+                                    $current_balance = $results_p->total_fee - $approved_paid - $result->paid;
 
                                     $sql_c = "SELECT * from tblcandidate where CandidateId= '$candidate_id'";
                                     $query_c = $dbh->prepare($sql_c);
@@ -198,9 +209,9 @@ if (strlen($_SESSION['alogin']) == "") {
                         <td><?php echo htmlentities($results_c[0]->candidatename); ?></td>
                         <td><?php echo htmlentities($jobroll_name); ?></td>
                         <td class="text-end"><?php echo number_format($results_p->total_fee, 2); ?></td>
-                        <td class="text-end"><?php echo number_format($results_p->paid, 2); ?></td>
-                        <td class="text-end"><?php echo number_format($results_p->balance, 2); ?></td>
-                        <td class="text-end" style="background-color: #fffbe6; font-weight: bold;"><?php echo number_format($result->paid, 2); ?></td>
+                        <td class="text-end"><?php echo number_format($approved_paid, 2); ?></td>
+                        <td class="text-end"><?php echo number_format($current_balance, 2); ?></td>
+                        <td class="text-end" style="background-color: #fffbe6; font-weight: bold; color: #856404;" title="Pending Approval"><?php echo number_format($result->paid, 2); ?></td>
                         <td><?php echo date("d-m-Y", strtotime($result->created)); ?></td>
                         <td class="text-center">
                             <?php if($_SESSION['user_type']!=1) { ?>
