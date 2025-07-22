@@ -525,9 +525,36 @@ if (strlen($_SESSION['alogin']) == "") {
                                             <input type="text" name="village" class="form-control" id="village"
                                                 placeholder="Village" value="<?=$results['village']; ?>">
                                         </div>
+                                    </div>
 
+                                    <!-- Payment Breakdown Section -->
+                                    <div class="card mt-3 mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0">Payment Breakdown</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="registration_fee">Registration Fee</label>
+                                                        <input type="text" class="form-control" id="registration_fee" 
+                                                               value="₹100" readonly>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="course_fee">Course/Jobroll Fee</label>
+                                                        <input type="text" class="form-control" id="course_fee" 
+                                                               value="₹<?php echo ($payment_val - 100 > 0) ? ($payment_val - 100) : 0; ?>" readonly>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
                                         <div class="form-group col-md-6">
-                                            <label for="total_fee">Total Fee</label>
+                                            <label for="total_fee">Total Fee (Registration + Course)</label>
                                             <input type="text" name="total_fee" class="form-control" id="total_fee"
                                                 placeholder="Total Fee" value="<?=$payment_val?>" readonly>
                                         </div>
@@ -938,20 +965,37 @@ if (strlen($_SESSION['alogin']) == "") {
                                                             <?php } ?>
                                                             <?php endforeach; ?>
                                                         <?php endif ?>
+                                                        
+                                                        <!-- Fee Breakdown Section -->
+                                                        <tr class="table-info">
+                                                            <td colspan="3"><b>Fee Breakdown</b></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><b></b></td>
+                                                            <td><b>Registration Fee</b></td>
+                                                            <td class="text-right"><b>₹100</b></td>
+                                                        </tr>
+                                                        <?php if($p_result[0]['total_fee'] > 100) { ?>
+                                                        <tr>
+                                                            <td><b></b></td>
+                                                            <td><b>Course/Jobroll Fee</b></td>
+                                                            <td class="text-right"><b>₹<?php echo ($p_result[0]['total_fee'] - 100); ?></b></td>
+                                                        </tr>
+                                                        <?php } ?>
                                                         <tr>
                                                             <td><b></b></td>
                                                             <td><b>Total Payable Fee</b></td>
-                                                            <td class="text-right"><b><?=$p_result[0]['total_fee']?></b></td>
+                                                            <td class="text-right"><b>₹<?=$p_result[0]['total_fee']?></b></td>
                                                         </tr>
                                                         <tr>
                                                             <td><b></b></td>
                                                             <td><b>Total Paid</b></td>
-                                                            <td class="text-right"><b><?=$p_result[0]['paid']?></b></td>
+                                                            <td class="text-right"><b>₹<?=$p_result[0]['paid']?></b></td>
                                                         </tr>
                                                         <tr class="table-warning">
                                                             <td><b></b></td>
                                                             <td><b>Balance</b></td>
-                                                            <td class="text-right"><b><?=$p_result[0]['balance']?></b></td>
+                                                            <td class="text-right"><b>₹<?=$p_result[0]['balance']?></b></td>
                                                         </tr>
                                                     </tbody>
                                                 </table>

@@ -136,7 +136,46 @@ if (strlen($_SESSION['alogin']) == "") {
 
             $lastInsertId = $dbh->lastInsertId();
             if ($lastInsertId) {
-                $msg = "Student info added successfully";
+                // Automatically create ₹100 registration fee for the new candidate
+                try {
+                    $registrationFee = 100;
+                    $today = date('Y-m-d');
+                    
+                    // Insert registration fee into payment table
+                    $paymentSql = "INSERT INTO payment (
+                        enrollmentid, candidate_id, discount, paid, balance, total_fee, created_at, added_type
+                    ) VALUES (
+                        :enrollmentid, :candidate_id, :discount, :paid, :balance, :total_fee, :created_at, :added_type
+                    )";
+                    
+                    $paymentQuery = $dbh->prepare($paymentSql);
+                    $paymentQuery->bindParam(':enrollmentid', $enrollmentid, PDO::PARAM_STR);
+                    $paymentQuery->bindParam(':candidate_id', $lastInsertId, PDO::PARAM_INT);
+                    $paymentQuery->bindParam(':discount', $discount = 0, PDO::PARAM_STR);
+                    $paymentQuery->bindParam(':paid', $paid = 0, PDO::PARAM_STR);
+                    $paymentQuery->bindParam(':balance', $registrationFee, PDO::PARAM_STR);
+                    $paymentQuery->bindParam(':total_fee', $registrationFee, PDO::PARAM_STR);
+                    $paymentQuery->bindParam(':created_at', $today, PDO::PARAM_STR);
+                    $paymentQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
+                    $paymentQuery->execute();
+                    
+                    // Add registration fee to EMI list as pending payment
+                    $emiSql = "INSERT INTO emi_list (candidate_id, paid, created, added_type, payment_mode) 
+                               VALUES (:candidate_id, :paid, :created, :added_type, :payment_mode)";
+                    $emiQuery = $dbh->prepare($emiSql);
+                    $emiQuery->bindParam(':candidate_id', $lastInsertId, PDO::PARAM_INT);
+                    $emiQuery->bindParam(':paid', $registrationFee, PDO::PARAM_STR);
+                    $emiQuery->bindParam(':created', $today, PDO::PARAM_STR);
+                    $emiQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
+                    $emiQuery->bindParam(':payment_mode', $payment_mode = 'Registration Fee', PDO::PARAM_STR);
+                    $emiQuery->execute();
+                    
+                } catch(PDOException $e) {
+                    // If payment creation fails, log it but don't stop registration
+                    error_log("Failed to create registration fee for candidate ID $lastInsertId: " . $e->getMessage());
+                }
+                
+                $msg = "Student info added successfully. ₹100 registration fee has been automatically added to pending payments.";
                 echo  '<script> setTimeout(function() { window.location.href = "edit-candidate.php?candidateid='.$lastInsertId.'"; }, 1000); </script>';
             } else {
                 $error = "Something went wrong. Please try again";
