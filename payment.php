@@ -476,7 +476,7 @@ if (strlen($_SESSION['alogin']) == "") {
                                         candidate found: <?= isset($results) ? 'YES' : 'NO' ?><br>
                                         result4: <?= isset($result4) ? json_encode($result4) : 'NULL' ?>
                                     </div>
-                                    <?php } ?>>
+                                    <?php } ?>
 
                                     <div class="form-row">
                                         <div class="form-group col-md-6">
