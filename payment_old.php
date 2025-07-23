@@ -11,23 +11,64 @@ if (strlen($_SESSION['alogin']) == "") {
 
     $last_id = $_GET['last_id'];
 
-
+    // Handle refresh request
+    if(isset($_GET['refresh'])) {
+        // Delete existing payment record and recreate
+        try {
+            $deleteSql = "DELETE FROM payment WHERE candidate_id = :candidate_id";
+            $deleteQuery = $dbh->prepare($deleteSql);
+            $deleteQuery->bindParam(':candidate_id', $last_id, PDO::PARAM_INT);
+            $deleteQuery->execute();
+            
+            $msg = "Payment data refreshed successfully!";
+        } catch(PDOException $e) {
+            $error = "Error refreshing payment data: " . $e->getMessage();
+        }
+    }
 
     $candidate_id = $last_id;
 
+    // Get candidate information first
+    $sql = "SELECT * FROM tblcandidate WHERE CandidateId = :candidate_id"; 
+    $query = $dbh->prepare($sql);
+    $query->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+    $query->execute();
+    $results = $query->fetch(PDO::FETCH_ASSOC);
 
+    // Check if candidate exists
+    if ($results) {
+        $enroll = $results['enrollmentid'];
+        $jobid = $results['job_roll'] ?? 0;
+    } else {
+        echo "<script>alert('Candidate not found!'); window.location.href='manage-candidate.php';</script>";
+        exit;
+    }
 
+    // Get job roll payment amount
+    $sql4 = "SELECT JobrollId, payment FROM tbljobroll WHERE JobrollId = :jobid";
+    $query4 = $dbh->prepare($sql4);
+    $query4->bindParam(':jobid', $jobid, PDO::PARAM_INT);
+    $query4->execute();
+    $result4 = $query4->fetch(PDO::FETCH_ASSOC);
 
+    // Calculate total payment value (registration + course fee)
+    $payment_val = 100; // Default registration fee
+    if ($result4 && isset($result4['payment'])) {
+        $payment_val = $result4['payment']; // This already includes registration fee
+    }
+
+    // Check for existing payment record
     $checkSql = "SELECT * FROM payment WHERE candidate_id = :candidate_id";
     $checkQuery = $dbh->prepare($checkSql);
     $checkQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
     $checkQuery->execute();
-    
-    // Fetch all rows associated with the candidate_id
     $result = $checkQuery->fetchAll(PDO::FETCH_ASSOC);
 
-    $Balance_val = $row['total_fee'];
-    $total_fee= $row['total_fee'];
+    // Initialize variables
+    $total_fee = $payment_val;
+    $Discount_val = 0;
+    $Paid_val = 0;
+    $Balance_val = $payment_val;
 
     if (!empty($result)) {
         // Candidate exists, show the data
@@ -41,13 +82,15 @@ if (strlen($_SESSION['alogin']) == "") {
                 $Balance_val = $row['balance'];
             }
             
-            
         }
+        // Check if payment is complete
+        $is_payment_complete = ($Paid_val >= $total_fee && $total_fee > 0);
     } else {
         
         $Discount_val = '0';
         $Paid_val = '0';
         $total_fee = '0';
+        $is_payment_complete = false;
     }
 
     if (isset($_POST['submit'])) {
@@ -85,7 +128,6 @@ if (strlen($_SESSION['alogin']) == "") {
 
         if ($recordExists) {
 
-
             $balance = $_POST['balance'];
             
             $paid = $_POST['total_fee'] - $_POST['balance'];
@@ -95,6 +137,17 @@ if (strlen($_SESSION['alogin']) == "") {
             }else{
                 $status = "Pending";
             }
+
+            // Check if there are any already approved payments for this candidate
+            // This prevents resetting approved payments back to pending when editing candidate details
+            $checkApprovedSql = "SELECT added_type FROM payment WHERE candidate_id = :candidate_id";
+            $checkApprovedQuery = $dbh->prepare($checkApprovedSql);
+            $checkApprovedQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
+            $checkApprovedQuery->execute();
+            $currentPayment = $checkApprovedQuery->fetch(PDO::FETCH_ASSOC);
+            
+            // Preserve existing added_type if it's already approved (1), otherwise use current user type
+            $added_type = ($currentPayment && $currentPayment['added_type'] == 1) ? 1 : $_SESSION['user_type'];
 
              // Update existing record
             $updateSql = "UPDATE payment 
@@ -110,19 +163,21 @@ if (strlen($_SESSION['alogin']) == "") {
             $updateQuery->bindParam(':created_at', $created_at, PDO::PARAM_STR);
             $updateQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT); // Ensure candidate_id is bound
             $updateQuery->bindParam(':status', $status, PDO::PARAM_STR); // Ensure candidate_id is bound
-            $updateQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR); // Ensure candidate_id is bound
+            $updateQuery->bindParam(':added_type', $added_type, PDO::PARAM_STR); // Use preserved added_type
 
             // Execute the query
             $updateQuery->execute();
 
             $paid = $_POST['discount'] + $_POST['paid'];
             $payment_mode = $_POST['payment_mode'];
+            
+            // For EMI entries, use the same logic - preserve approval status
             $insertSql = "INSERT INTO emi_list (candidate_id, paid, created,added_type,payment_mode ) VALUES ( :candidate_id, :paid, :created,:added_type,:payment_mode )";
             $insertQuery = $dbh->prepare($insertSql);
             $insertQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
             $insertQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
             $insertQuery->bindParam(':created', $created, PDO::PARAM_STR);
-            $insertQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
+            $insertQuery->bindParam(':added_type', $added_type, PDO::PARAM_STR); // Use same preserved added_type
             $insertQuery->bindParam(':payment_mode', $payment_mode, PDO::PARAM_STR);
             $insertQuery->execute();
 
@@ -288,82 +343,15 @@ if (strlen($_SESSION['alogin']) == "") {
         echo "Error: " . $e->getMessage();
     }
 }
-    
-    // SQL query to fetch the last enrollmentid
-    $sql = "SELECT * FROM tblcandidate WHERE CandidateId = '$last_id' "; // Replace 'id' with the actual primary key or a unique column
-    
-    $query = $dbh->prepare($sql);
-    $query->execute();
-    $results = $query->fetch(PDO::FETCH_ASSOC);
 
-    //print_r($results); die;
-    
-    // Check if a result was found
-    if ($results) {
-        $enroll = $results['enrollmentid'];
-    } else {
-        $enroll = "No records found.";
-    }
-
-
-    $last_id = $_GET['last_id'];
-    // SQL query to fetch the last enrollmentid
-    $sql1 = "SELECT CandidateId,jobid FROM tblcandidate WHERE CandidateId = '$last_id' "; // Replace 'id' with the 
-    $query = $dbh->prepare($sql);
-    $query->execute();
-    $result = $query->fetch(PDO::FETCH_ASSOC);
-    $jobid = $result['job_roll'];
-
-
-    // SQL query to fetch the last tbljobroll
-    $sql4 = "SELECT JobrollId, payment FROM tbljobroll WHERE JobrollId = :jobid";
-    $query4 = $dbh->prepare($sql4);
-
-    // Bind parameter to prevent SQL injection
-    $query4->bindParam(':jobid', $jobid, PDO::PARAM_INT);
-
-    // Execute the query
-    $query4->execute();
-
-    // Fetch the first row
-    $result4 = $query4->fetch(PDO::FETCH_ASSOC);
-
-    if ($result4 && isset($result4['payment'])) {
-        $payment_val = $result4['payment'];
-        if($total_fee =='0'){
-            $Balance_val = $result4['payment'];
-        }
-
-    } else {
-       // echo "No payment record found for JobrollId: " . htmlspecialchars($jobid);
-    }
-
-
-    $candidate_id = $last_id;
-    $checkSql = "SELECT * FROM payment WHERE candidate_id = :candidate_id";
-    $checkQuery = $dbh->prepare($checkSql);
-    $checkQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-    $checkQuery->execute();
-    
-    // Fetch all rows associated with the candidate_id
-    $result_new = $checkQuery->fetchAll(PDO::FETCH_ASSOC);
-
-    if (!empty($result_new)) {
-        // Candidate exists, show the data
-        foreach ($result_new as $row) {
-            $Discount_val = '0';//$row['discount'];
-            $Paid_val = $row['paid'];
-            $total_fee= $row['total_fee'];
-            //if($row['balance'] == ''){
-             //   $Balance_val = $row['total_fee'];
-            //}else{
-                $Balance_val = $row['balance'];
-            //}
-            
-            
-        }
-    }
-
+    // Ensure variables are properly set for form display
+    if(!isset($payment_val)) $payment_val = 100;
+    if(!isset($total_fee) || $total_fee == 0) $total_fee = $payment_val;
+    if(!isset($Paid_val)) $Paid_val = 0;
+    if(!isset($Discount_val)) $Discount_val = 0;
+    if(!isset($Balance_val)) $Balance_val = $total_fee - $Paid_val;
+    if($Balance_val < 0) $Balance_val = 0;
+    if(!isset($is_payment_complete)) $is_payment_complete = ($Paid_val >= $total_fee && $total_fee > 0);
 
 ?>
 <!DOCTYPE html>
@@ -407,6 +395,83 @@ if (strlen($_SESSION['alogin']) == "") {
         .dt-button-collection {
             max-height: 300px; /* Adjust height as needed */
             overflow-y: auto !important;
+        }
+        
+        /* Styling for disabled payment fields */
+        input:disabled, select:disabled {
+            background-color: #f8f9fa !important;
+            color: #6c757d !important;
+            opacity: 0.8;
+            cursor: not-allowed;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        /* Enhanced Form Styling */
+        .card {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .card-header {
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+            font-weight: 600;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        
+        .btn-lg {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 5px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-lg:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .bg-info {
+            background: linear-gradient(135deg, #17a2b8, #138496) !important;
+        }
+        
+        .bg-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3) !important;
+        }
+        
+        .bg-success {
+            background: linear-gradient(135deg, #28a745, #1e7e34) !important;
+        }
+        
+        .form-control[readonly] {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+        
+        small.text-muted {
+            font-style: italic;
+            color: #6c757d !important;
         }
 
     </style>
@@ -457,96 +522,186 @@ if (strlen($_SESSION['alogin']) == "") {
                                 <form method="post" enctype="multipart/form-data">
                                     <input type="hidden" name="candidate_id"  required="required" value="<?=$_GET['last_id']?>">
 
-                                    <div class="form-row">
-                                        <div class="form-group col-md-6">
-                                            <label for="enrollmentid">Enrollment ID</label>
-                                            <input type="text" name="enrollmentid" class="form-control"
-                                                id="enrollmentid" required="required"
-                                                placeholder="Enrollment ID" value="<?=$enroll?>">
+                                    <!-- Candidate Information Section -->
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-info text-white py-1">
+                                            <h6 class="mb-0" style="font-size: 14px;"><i class="fas fa-user me-2"></i> Candidate Information</h6>
                                         </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="enrollmentid">Enrollment ID</label>
+                                                        <input type="text" name="enrollmentid" class="form-control"
+                                                            id="enrollmentid" required="required"
+                                                            placeholder="Enrollment ID" value="<?=$enroll?>">
+                                                    </div>
+                                                </div>
 
-                                        <div class="form-group col-md-6">
-                                            <label for="created_at">Created Date</label>
-                                            <input type="text" name="created_at" class="form-control"
-                                                id="datepicker" required="required"
-                                                placeholder="Created Date" value="<?=date('d-m-Y'); ?>">
-                                        </div>
-                                        
-                                        <div class="form-group col-md-6">
-                                            <label for="candidatename">Full Name</label>
-                                            <input type="text" name="candidatename" class="form-control"
-                                                id="candidatename" required="required"
-                                                placeholder="Enter Full Name" value="<?=$results['candidatename']; ?>">
-                                        </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="candidatename">Full Name</label>
+                                                        <input type="text" name="candidatename" class="form-control"
+                                                            id="candidatename" required="required"
+                                                            placeholder="Enter Full Name" value="<?= isset($results['candidatename']) ? $results['candidatename'] : ''; ?>">
+                                                    </div>
+                                                </div>
 
-                                        <input type="hidden" name="phone" class="form-control"
-                                                id="phone" required="required" value="<?=$results['phonenumber']; ?>">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="fathername">Father Name</label>
+                                                        <input type="text" name="fathername" required="required"
+                                                            class="form-control" id="fathername"
+                                                            placeholder="Enter Father Name" value="<?= isset($results['fathername']) ? $results['fathername'] : ''; ?>">
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                        <div class="form-group col-md-6">
-                                            <label for="fathername">Father Name</label>
-                                            <input type="text" name="fathername" required="required"
-                                                class="form-control" id="fathername"
-                                                placeholder="Enter Father Name" value="<?=$results['fathername']; ?>">
-                                        </div>
-                                    </div>
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="village">Village</label>
+                                                        <input type="text" name="village" class="form-control" id="village"
+                                                            placeholder="Village" value="<?= isset($results['village']) ? $results['village'] : ''; ?>">
+                                                    </div>
+                                                </div>
 
-                                
-                                    <div class="form-row">
-                                        <div class="form-group col-md-6">
-                                            <label for="village">Village</label>
-                                            <input type="text" name="village" class="form-control" id="village"
-                                                placeholder="Village" value="<?=$results['village']; ?>">
-                                        </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="created_at">Payment Date</label>
+                                                        <input type="text" name="created_at" class="form-control"
+                                                            id="datepicker" required="required"
+                                                            placeholder="Payment Date" value="<?=date('d-m-Y'); ?>">
+                                                    </div>
+                                                </div>
 
-                                        <div class="form-group col-md-6">
-                                            <label for="total_fee">Total Fee</label>
-                                            <input type="text" name="total_fee" class="form-control" id="total_fee"
-                                                placeholder="Total Fee" value="<?=$payment_val?>" readonly>
-                                        </div>
-
-                                        <div class="form-group col-md-6">
-                                            <label for="discount">Discount</label>
-                                            <input type="number" name="discount" class="form-control" id="discount"
-                                                placeholder="Discount" value="0" <?php if($payment_val != $Balance_val) { echo 'readonly'; } ?> >
-                                        </div>
-
-                                        <div class="form-group col-md-6">
-                                            <label for="paid">Pay</label>
-                                            <input type="number" name="paid" class="form-control" id="paid"
-                                                placeholder="Paid" value="0">
-                                        </div>
-
-                                        <div class="form-group col-md-6">
-                                            <label for="balance">Balance</label>
-                                            <input type="text" name="balance" class="form-control" id="balance"
-                                                placeholder="Balance" value="<?=$Balance_val?>">
-
-                                                <input type="hidden" name="" class="form-control" id="balance_total"
-                                                placeholder="Balance" value="<?=$Balance_val?>">
-                                        </div>
-
-                                        <div class="form-group col-md-6">
-                                            <label for="payment_mode">Payment Mode</label>
-                                            <select name="payment_mode" id="payment_mode" class="form-control" required>
-                                                <option value="">Select Payment Mode</option>
-                                                <option value="Online">Online</option>
-                                                <option value="Cash">Cash</option>
-                                            </select>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="payment_mode">Payment Mode</label>
+                                                        <select name="payment_mode" id="payment_mode" class="form-control" required <?php if(isset($is_payment_complete) && $is_payment_complete) { echo 'disabled'; } ?>>
+                                                            <option value="">Select Payment Mode</option>
+                                                            <option value="Online">Online</option>
+                                                            <option value="Cash">Cash</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="form-row">
-                                        <div class="form-group col-md-12 error_message text-danger"></div>
+                                    <!-- Payment Breakdown Section -->
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-primary text-white py-1">
+                                            <h6 class="mb-0" style="font-size: 14px;"><i class="fas fa-calculator me-2"></i> Fee Breakdown</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="registration_fee">Registration Fee</label>
+                                                        <input type="text" class="form-control" id="registration_fee" 
+                                                               value="₹100" readonly>
+                                                        <small class="text-muted">One-time registration fee</small>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="course_fee">Course/Jobroll Fee</label>
+                                                        <input type="text" class="form-control" id="course_fee" 
+                                                               value="₹<?php echo isset($payment_val) && ($payment_val - 100 > 0) ? ($payment_val - 100) : 0; ?>" readonly>
+                                                        <small class="text-muted">Training course fee</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="total_fee"><strong>Total Fee (Registration + Course)</strong></label>
+                                                        <input type="text" name="total_fee" class="form-control" id="total_fee"
+                                                            placeholder="Total Fee" value="<?= isset($payment_val) ? $payment_val : 100 ?>" readonly style="font-weight: bold; background-color: #e9ecef;">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="discount">Discount Amount</label>
+                                                        <input type="number" name="discount" class="form-control" id="discount"
+                                                            placeholder="Enter discount amount" value="0" <?php if(isset($payment_val) && isset($Balance_val) && $payment_val != $Balance_val) { echo 'readonly'; } ?>>
+                                                        <small class="text-muted">Special discount if applicable</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="form-row">
-                                        <div class="form-group col-md-12">
+                                    <!-- Payment Transaction Section -->
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-success text-white py-1">
+                                            <h6 class="mb-0" style="font-size: 14px;"><i class="fas fa-money-bill-wave me-2"></i> Payment Transaction</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="paid"><strong>Amount Paying Now</strong></label>
+                                                        <input type="number" name="paid" class="form-control" id="paid"
+                                                            placeholder="Enter payment amount" value="0" <?php if(isset($is_payment_complete) && $is_payment_complete) { echo 'disabled readonly'; } ?> style="font-size: 16px; padding: 12px;">
+                                                        <small class="text-muted">Amount being paid in this transaction</small>
+                                                    </div>
+                                                </div>
 
-                                            <button type="submit" name="submit" class="btn btn-primary" id="submit_btn">Make Payment</button>
-                                            <a href="manage-candidate.php" class="btn btn-danger">Skip</a>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="balance"><strong>Remaining Balance</strong></label>
+                                                        <input type="text" name="balance" class="form-control" id="balance"
+                                                            placeholder="Remaining balance" value="<?= isset($Balance_val) ? $Balance_val : 100 ?>" readonly style="font-weight: bold; background-color: #fff3cd;">
+                                                        <small class="text-muted">Amount remaining after this payment</small>
+                                                        
+                                                        <input type="hidden" name="" class="form-control" id="balance_total"
+                                                            placeholder="Balance" value="<?= isset($Balance_val) ? $Balance_val : 100 ?>">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                            <button type="button" class="btn btn-success" onClick='p_all_data(<?php echo $last_id; ?>)' data-toggle="modal" data-target="#p_myModal">Print</td></button>
+                                    <!-- Hidden Fields -->
+                                    <input type="hidden" name="phone" class="form-control" id="phone" required="required" value="<?= isset($results['phonenumber']) ? $results['phonenumber'] : ''; ?>">
 
+                                    <!-- Error Messages -->
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="error_message text-danger"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Payment Status Alert -->
+                                    <?php if(isset($is_payment_complete) && $is_payment_complete) { ?>
+                                    <div class="alert alert-success">
+                                        <i class="fas fa-check-circle"></i> <strong>Payment Complete!</strong> This candidate has paid the full amount. No further payments are required.
+                                    </div>
+                                    <?php } ?>
+
+                                    <!-- Action Buttons -->
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <?php if(!isset($is_payment_complete) || !$is_payment_complete) { ?>
+                                            <button type="submit" name="submit" class="btn btn-primary btn-lg me-2" id="submit_btn">
+                                                <i class="fas fa-credit-card"></i> Make Payment
+                                            </button>
+                                            <?php } else { ?>
+                                            <button type="button" class="btn btn-secondary btn-lg me-2" disabled>
+                                                <i class="fas fa-check"></i> Payment Complete
+                                            </button>
+                                            <?php } ?>
+                                            
+                                            <a href="manage-candidate.php" class="btn btn-danger btn-lg me-2">
+                                                <i class="fas fa-arrow-left"></i> Back to Candidates
+                                            </a>
+
+                                            <button type="button" class="btn btn-success btn-lg" onClick='p_all_data(<?php echo isset($last_id) ? $last_id : $_GET['last_id']; ?>)' data-toggle="modal" data-target="#p_myModal">
+                                                <i class="fas fa-print"></i> Print Receipt
+                                            </button>
                                         </div>
                                     </div>
 
@@ -671,16 +826,6 @@ if (strlen($_SESSION['alogin']) == "") {
                                         <h4 class="modal-title">Payment Receipt</h4>
                                       </div>
                                       <div class="modal-body" id="p_myModals">
-
-
-
-                                        <!DOCTYPE html>
-                                        <html lang="en">
-                                        <head>
-                                            <meta charset="UTF-8">
-                                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                            <title>Payment Receipt</title>
-                                            <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"> -->
                                             <style>
                                                 .receipt {
                                                     width: 100%;
@@ -842,8 +987,6 @@ if (strlen($_SESSION['alogin']) == "") {
                                                     }
                                                 }
                                             </style>
-                                        </head>
-                                        <body>
                                             <div class="receipt">
                                                 <div class="receipt-header">
                                                     <table class="table">
@@ -901,20 +1044,37 @@ if (strlen($_SESSION['alogin']) == "") {
                                                             <?php } ?>
                                                             <?php endforeach; ?>
                                                         <?php endif ?>
+                                                        
+                                                        <!-- Fee Breakdown Section -->
+                                                        <tr class="table-info">
+                                                            <td colspan="3"><b>Fee Breakdown</b></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><b></b></td>
+                                                            <td><b>Registration Fee</b></td>
+                                                            <td class="text-right"><b>₹100</b></td>
+                                                        </tr>
+                                                        <?php if($p_result[0]['total_fee'] > 100) { ?>
+                                                        <tr>
+                                                            <td><b></b></td>
+                                                            <td><b>Course/Jobroll Fee</b></td>
+                                                            <td class="text-right"><b>₹<?php echo ($p_result[0]['total_fee'] - 100); ?></b></td>
+                                                        </tr>
+                                                        <?php } ?>
                                                         <tr>
                                                             <td><b></b></td>
                                                             <td><b>Total Payable Fee</b></td>
-                                                            <td class="text-right"><b><?=$p_result[0]['total_fee']?></b></td>
+                                                            <td class="text-right"><b>₹<?=$p_result[0]['total_fee']?></b></td>
                                                         </tr>
                                                         <tr>
                                                             <td><b></b></td>
                                                             <td><b>Total Paid</b></td>
-                                                            <td class="text-right"><b><?=$p_result[0]['paid']?></b></td>
+                                                            <td class="text-right"><b>₹<?=$p_result[0]['paid']?></b></td>
                                                         </tr>
                                                         <tr class="table-warning">
                                                             <td><b></b></td>
                                                             <td><b>Balance</b></td>
-                                                            <td class="text-right"><b><?=$p_result[0]['balance']?></b></td>
+                                                            <td class="text-right"><b>₹<?=$p_result[0]['balance']?></b></td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
@@ -926,9 +1086,6 @@ if (strlen($_SESSION['alogin']) == "") {
                                                     <p><strong>Ph:</strong> 7799773656</p>
                                                 </div>
                                             </div>
-                                        </body>
-                                        </html>
-
 
                                         
                                         
@@ -985,19 +1142,6 @@ if (strlen($_SESSION['alogin']) == "") {
     <script src="js/prism/prism.js"></script>
     <script src="js/select2/select2.min.js"></script>
     <script src="js/main.js"></script>
-
-
-           <script src="js/jquery/jquery-2.2.4.min.js"></script>
-        <script src="https://code.jquery.com/ui/1.14.1/jquery-ui.js"></script>
-
-        <script src="js/bootstrap/bootstrap.min.js"></script>
-        <script src="js/pace/pace.min.js"></script>
-        <script src="js/lobipanel/lobipanel.min.js"></script>
-        <script src="js/iscroll/iscroll.js"></script>
-        <script src="js/prism/prism.js"></script>
-        <script src="js/select2/select2.min.js"></script>
-        <script src="js/main.js"></script>
-        
 
     <script>
         $(function($) {
@@ -1101,31 +1245,5 @@ if (strlen($_SESSION['alogin']) == "") {
     
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 <?PHP } ?>
