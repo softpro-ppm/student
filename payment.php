@@ -38,7 +38,7 @@ if (strlen($_SESSION['alogin']) == "") {
             if($row['balance'] == ''){
                 $Balance_val = $row['total_fee'];
             }else{
-                //echo $Balance_val = $row['balance'];
+                $Balance_val = $row['balance'];
                 $Balance_val = $row['total_fee'];
             }
             
