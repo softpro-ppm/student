@@ -26,9 +26,8 @@ if (strlen($_SESSION['alogin']) == "") {
     // Fetch all rows associated with the candidate_id
     $result = $checkQuery->fetchAll(PDO::FETCH_ASSOC);
 
-    // Initialize variables
-    $Balance_val = 0;
-    $total_fee = 0;
+    $Balance_val = $row['total_fee'];
+    $total_fee= $row['total_fee'];
 
     if (!empty($result)) {
         // Candidate exists, show the data
@@ -86,19 +85,13 @@ if (strlen($_SESSION['alogin']) == "") {
 
         if ($recordExists) {
 
-            // Get the amount being paid now from the form
-            $amount_paying_now = $_POST['paid'];
+
             $balance = $_POST['balance'];
             
-            // Calculate total paid: existing paid amount + current payment
-            $total_paid_so_far = $Paid_val + $amount_paying_now;
-            
-            // Calculate new balance: total fee - total paid so far
-            $new_balance = $_POST['total_fee'] - $total_paid_so_far;
+            $paid = $_POST['total_fee'] - $_POST['balance'];
 
-            if($new_balance <= 0){
+            if($total_fee == $paid){
                 $status = "Paid";
-                $new_balance = 0;
             }else{
                 $status = "Pending";
             }
@@ -112,8 +105,8 @@ if (strlen($_SESSION['alogin']) == "") {
 
             // Bind parameters
             $updateQuery->bindParam(':discount', $discount, PDO::PARAM_STR); // Adjust type if needed
-            $updateQuery->bindParam(':paid', $total_paid_so_far, PDO::PARAM_STR);
-            $updateQuery->bindParam(':balance', $new_balance, PDO::PARAM_STR);
+            $updateQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
+            $updateQuery->bindParam(':balance', $balance, PDO::PARAM_STR);
             $updateQuery->bindParam(':created_at', $created_at, PDO::PARAM_STR);
             $updateQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT); // Ensure candidate_id is bound
             $updateQuery->bindParam(':status', $status, PDO::PARAM_STR); // Ensure candidate_id is bound
@@ -122,12 +115,12 @@ if (strlen($_SESSION['alogin']) == "") {
             // Execute the query
             $updateQuery->execute();
 
-            $paid_for_emi = $_POST['discount'] + $_POST['paid'];
+            $paid = $_POST['discount'] + $_POST['paid'];
             $payment_mode = $_POST['payment_mode'];
             $insertSql = "INSERT INTO emi_list (candidate_id, paid, created,added_type,payment_mode ) VALUES ( :candidate_id, :paid, :created,:added_type,:payment_mode )";
             $insertQuery = $dbh->prepare($insertSql);
             $insertQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-            $insertQuery->bindParam(':paid', $paid_for_emi, PDO::PARAM_STR);
+            $insertQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
             $insertQuery->bindParam(':created', $created, PDO::PARAM_STR);
             $insertQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
             $insertQuery->bindParam(':payment_mode', $payment_mode, PDO::PARAM_STR);
@@ -139,7 +132,7 @@ if (strlen($_SESSION['alogin']) == "") {
             // inserting data in account 
 		
             	
-            if($paid_for_emi != 0){
+            if($paid != 0){
                 // Include your database connection
                 include 'includes/account.php'; // $acc connection defined here
                 
@@ -150,8 +143,8 @@ if (strlen($_SESSION['alogin']) == "") {
                 $description = $name;
                 $category = 'Student                  ';
                 $subcategory = 'Student Fees';
-                $amount = $paid_for_emi;       // Example: 10000.00
-                $received = $paid_for_emi;     // Example: 10000.00
+                $amount = $paid;       // Example: 10000.00
+                $received = $paid;     // Example: 10000.00
                 $balance = 0;             // Can also calculate: $amount - $received
                 $student_id = $candidate_id; // Must be defined before
                 
@@ -197,48 +190,36 @@ if (strlen($_SESSION['alogin']) == "") {
 		// end account section
 
         } else {
-            // New payment record - first time payment
-            $amount_paying_now = $_POST['paid'];
-            $total_fee_amount = $_POST['total_fee'];
-            
-            // For new record, paid amount is just what they're paying now
-            $total_paid = $amount_paying_now + $_POST['discount'];
-            $balance = $total_fee_amount - $total_paid;
-            
-            if($balance <= 0){
-                $balance = 0;
-                $status = "Paid";
-            } else {
-                $status = "Pending";
-            }
-            
+            //$balance = $total_fee-($_POST['paid']);
+            $balance = $_POST['balance'];
+            //$paid = $Paid_val+$_POST['paid']+$_POST['discount'];
+            $paid = $_POST['total_fee'] - $_POST['balance'];
             // Insert new record
             $insertSql = "INSERT INTO payment (
-                enrollmentid, candidate_id, discount, paid, balance, total_fee, created_at, status, added_type
+                enrollmentid, candidate_id, discount, paid, balance, total_fee, created_at,added_type
             ) VALUES (
-                :enrollmentid, :candidate_id, :discount, :paid, :balance, :total_fee, :created_at, :status, :added_type
+                :enrollmentid, :candidate_id, :discount, :paid, :balance, :total_fee, :created_at,:added_type
             )";
             $insertQuery = $dbh->prepare($insertSql);
             $insertQuery->bindParam(':enrollmentid', $enrollmentid, PDO::PARAM_STR);
             $insertQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
             $insertQuery->bindParam(':discount', $discount, PDO::PARAM_STR);
-            $insertQuery->bindParam(':paid', $total_paid, PDO::PARAM_STR);
+            $insertQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
             $insertQuery->bindParam(':balance', $balance, PDO::PARAM_STR);
-            $insertQuery->bindParam(':total_fee', $total_fee_amount, PDO::PARAM_STR);
+            $insertQuery->bindParam(':total_fee', $total_fee, PDO::PARAM_STR);
             $insertQuery->bindParam(':created_at', $created_at, PDO::PARAM_STR);
-            $insertQuery->bindParam(':status', $status, PDO::PARAM_STR);
             $insertQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
             $insertQuery->execute();
 
             $lastInsertId = $dbh->lastInsertId();
 
-            $paid_for_emi_new = $_POST['discount'] + $_POST['paid'];
+            $paid = $_POST['discount'] + $_POST['paid'];
             $payment_mode = $_POST['payment_mode'];
 
             $insertSql = "INSERT INTO emi_list (candidate_id, paid, created ,added_type,payment_mode) VALUES ( :candidate_id, :paid, :created ,:added_type,:payment_mode)";
             $insertQuery = $dbh->prepare($insertSql);
             $insertQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-            $insertQuery->bindParam(':paid', $paid_for_emi_new, PDO::PARAM_STR);
+            $insertQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
             $insertQuery->bindParam(':created', $created, PDO::PARAM_STR);
             $insertQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
             $insertQuery->bindParam(':payment_mode', $payment_mode, PDO::PARAM_STR);
@@ -254,7 +235,7 @@ if (strlen($_SESSION['alogin']) == "") {
             // inserting data in account 
 		
             	
-            if($paid_for_emi_new != 0){
+            if($paid != 0){
                 // Include your database connection
                 include 'includes/account.php'; // $acc connection defined here
                 
@@ -265,8 +246,8 @@ if (strlen($_SESSION['alogin']) == "") {
                 $description = $name;
                 $category = 'Student                  ';
                 $subcategory = 'Student Fees';
-                $amount = $paid_for_emi_new;       // Example: 10000.00
-                $received = $paid_for_emi_new;     // Example: 10000.00
+                $amount = $paid;       // Example: 10000.00
+                $received = $paid;     // Example: 10000.00
                 $balance = 0;             // Can also calculate: $amount - $received
                 $student_id = $candidate_id; // Must be defined before
                 
@@ -348,9 +329,9 @@ if (strlen($_SESSION['alogin']) == "") {
     $result4 = $query4->fetch(PDO::FETCH_ASSOC);
 
     if ($result4 && isset($result4['payment'])) {
-        $payment_val = $result4['payment'] + 100; // Add registration fee of ₹100
+        $payment_val = $result4['payment'];
         if($total_fee =='0'){
-            $Balance_val = $result4['payment'] + 100; // Add registration fee to balance too
+            $Balance_val = $result4['payment'];
         }
 
     } else {
@@ -373,12 +354,13 @@ if (strlen($_SESSION['alogin']) == "") {
             $Discount_val = '0';//$row['discount'];
             $Paid_val = $row['paid'];
             $total_fee= $row['total_fee'];
-            $Balance_val = $row['balance'];
-        }
-    } else {
-        // If no payment record exists, set balance to the full amount including registration fee
-        if(isset($payment_val)) {
-            $Balance_val = $payment_val; // This already includes the ₹100 registration fee
+            //if($row['balance'] == ''){
+             //   $Balance_val = $row['total_fee'];
+            //}else{
+                $Balance_val = $row['balance'];
+            //}
+            
+            
         }
     }
 
@@ -469,203 +451,102 @@ if (strlen($_SESSION['alogin']) == "") {
 
                     <!-- Candidates Table -->
                     <div class="card">
+                        
                         <div class="card-body p-2">
                             <div class="table-responsive">
                                 <form method="post" enctype="multipart/form-data">
                                     <input type="hidden" name="candidate_id"  required="required" value="<?=$_GET['last_id']?>">
 
-                                    <!-- Candidate Information Section -->
-                                    <div class="card mb-4">
-                                        <div class="card-header bg-info text-white py-2">
-                                            <h6 class="mb-0" style="font-size: 14px;"><i class="fas fa-user me-2"></i> Candidate Information</h6>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <label for="enrollmentid">Enrollment ID</label>
+                                            <input type="text" name="enrollmentid" class="form-control"
+                                                id="enrollmentid" required="required"
+                                                placeholder="Enrollment ID" value="<?=$enroll?>">
                                         </div>
-                                        <div class="card-body">
-                                            <div class="row">
-                                                <div class="col-md-4">
-                                                    <div class="form-group">
-                                                        <label for="enrollmentid">Enrollment ID</label>
-                                                        <input type="text" name="enrollmentid" class="form-control"
-                                                            id="enrollmentid" required="required"
-                                                            placeholder="Enrollment ID" value="<?=$enroll?>">
-                                                    </div>
-                                                </div>
 
-                                                <div class="col-md-4">
-                                                    <div class="form-group">
-                                                        <label for="candidatename">Full Name</label>
-                                                        <input type="text" name="candidatename" class="form-control"
-                                                            id="candidatename" required="required"
-                                                            placeholder="Enter Full Name" value="<?=$results['candidatename']; ?>">
-                                                    </div>
-                                                </div>
+                                        <div class="form-group col-md-6">
+                                            <label for="created_at">Created Date</label>
+                                            <input type="text" name="created_at" class="form-control"
+                                                id="datepicker" required="required"
+                                                placeholder="Created Date" value="<?=date('d-m-Y'); ?>">
+                                        </div>
+                                        
+                                        <div class="form-group col-md-6">
+                                            <label for="candidatename">Full Name</label>
+                                            <input type="text" name="candidatename" class="form-control"
+                                                id="candidatename" required="required"
+                                                placeholder="Enter Full Name" value="<?=$results['candidatename']; ?>">
+                                        </div>
 
-                                                <div class="col-md-4">
-                                                    <div class="form-group">
-                                                        <label for="fathername">Father Name</label>
-                                                        <input type="text" name="fathername" required="required"
-                                                            class="form-control" id="fathername"
-                                                            placeholder="Enter Father Name" value="<?=$results['fathername']; ?>">
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <input type="hidden" name="phone" class="form-control"
+                                                id="phone" required="required" value="<?=$results['phonenumber']; ?>">
 
-                                            <div class="row">
-                                                <div class="col-md-4">
-                                                    <div class="form-group">
-                                                        <label for="village">Village</label>
-                                                        <input type="text" name="village" class="form-control" id="village"
-                                                            placeholder="Village" value="<?=$results['village']; ?>">
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-md-4">
-                                                    <div class="form-group">
-                                                        <label for="created_at">Payment Date</label>
-                                                        <input type="text" name="created_at" class="form-control"
-                                                            id="datepicker" required="required"
-                                                            placeholder="Payment Date" value="<?=date('d-m-Y'); ?>">
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-md-4">
-                                                    <div class="form-group">
-                                                        <label for="payment_mode">Payment Mode</label>
-                                                        <select name="payment_mode" id="payment_mode" class="form-control" required>
-                                                            <option value="">Select Payment Mode</option>
-                                                            <option value="Online">Online</option>
-                                                            <option value="Cash">Cash</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div class="form-group col-md-6">
+                                            <label for="fathername">Father Name</label>
+                                            <input type="text" name="fathername" required="required"
+                                                class="form-control" id="fathername"
+                                                placeholder="Enter Father Name" value="<?=$results['fathername']; ?>">
                                         </div>
                                     </div>
 
-                                    <!-- Payment Breakdown Section -->
-                                    <div class="card mb-4">
-                                        <div class="card-header bg-primary text-white py-2">
-                                            <h6 class="mb-0" style="font-size: 14px;"><i class="fas fa-calculator me-2"></i> Fee Breakdown</h6>
+                                
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <label for="village">Village</label>
+                                            <input type="text" name="village" class="form-control" id="village"
+                                                placeholder="Village" value="<?=$results['village']; ?>">
                                         </div>
-                                        <div class="card-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="registration_fee">Registration Fee</label>
-                                                        <input type="text" class="form-control" id="registration_fee" 
-                                                               value="₹100" readonly>
-                                                        <small class="text-muted">One-time registration fee</small>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="course_fee">Course/Jobroll Fee</label>
-                                                        <input type="text" class="form-control" id="course_fee" 
-                                                               value="₹<?php 
-                                                               if(isset($result4) && isset($result4['payment'])) {
-                                                                   echo $result4['payment']; // Show the original job roll payment amount
-                                                               } else {
-                                                                   echo '0';
-                                                               }
-                                                               ?>" readonly>
-                                                        <small class="text-muted">Training course fee</small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="total_fee"><strong>Total Fee (Registration + Course)</strong></label>
-                                                        <input type="text" name="total_fee" class="form-control" id="total_fee"
-                                                            placeholder="Total Fee" value="<?= isset($payment_val) ? $payment_val : 100 ?>" readonly style="font-weight: bold; background-color: #e9ecef;">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="discount">Discount Amount</label>
-                                                        <input type="number" name="discount" class="form-control" id="discount"
-                                                            placeholder="Enter discount amount" value="0" <?php if(isset($payment_val) && isset($Balance_val) && $payment_val != $Balance_val) { echo 'readonly'; } ?>>
-                                                        <small class="text-muted">Special discount if applicable</small>
-                                                    </div>
-                                                </div>
-                                            </div>
+
+                                        <div class="form-group col-md-6">
+                                            <label for="total_fee">Total Fee</label>
+                                            <input type="text" name="total_fee" class="form-control" id="total_fee"
+                                                placeholder="Total Fee" value="<?=$payment_val?>" readonly>
+                                        </div>
+
+                                        <div class="form-group col-md-6">
+                                            <label for="discount">Discount</label>
+                                            <input type="number" name="discount" class="form-control" id="discount"
+                                                placeholder="Discount" value="0" <?php if($payment_val != $Balance_val) { echo 'readonly'; } ?> >
+                                        </div>
+
+                                        <div class="form-group col-md-6">
+                                            <label for="paid">Pay</label>
+                                            <input type="number" name="paid" class="form-control" id="paid"
+                                                placeholder="Paid" value="0">
+                                        </div>
+
+                                        <div class="form-group col-md-6">
+                                            <label for="balance">Balance</label>
+                                            <input type="text" name="balance" class="form-control" id="balance"
+                                                placeholder="Balance" value="<?=$Balance_val?>">
+
+                                                <input type="hidden" name="" class="form-control" id="balance_total"
+                                                placeholder="Balance" value="<?=$Balance_val?>">
+                                        </div>
+
+                                        <div class="form-group col-md-6">
+                                            <label for="payment_mode">Payment Mode</label>
+                                            <select name="payment_mode" id="payment_mode" class="form-control" required>
+                                                <option value="">Select Payment Mode</option>
+                                                <option value="Online">Online</option>
+                                                <option value="Cash">Cash</option>
+                                            </select>
                                         </div>
                                     </div>
 
-                                    <!-- Payment Transaction Section -->
-                                    <div class="card mb-4">
-                                        <div class="card-header bg-success text-white py-2">
-                                            <h6 class="mb-0" style="font-size: 14px;"><i class="fas fa-money-bill-wave me-2"></i> Payment Transaction</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="paid"><strong>Amount Paying Now</strong></label>
-                                                        <input type="number" name="paid" class="form-control" id="paid"
-                                                            placeholder="Enter payment amount" value="0" style="font-size: 16px; padding: 12px;">
-                                                        <small class="text-muted">Amount being paid in this transaction</small>
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="balance"><strong>Remaining Balance</strong></label>
-                                                        <input type="text" name="balance" class="form-control" id="balance"
-                                                            placeholder="Remaining balance" value="<?php 
-                                                            // Calculate remaining balance: Course Fee - Already Paid + Registration Fee
-                                                            $course_fee = isset($result4) && isset($result4['payment']) ? $result4['payment'] : 0;
-                                                            $already_paid = isset($Paid_val) ? $Paid_val : 0;
-                                                            $registration_fee = 100;
-                                                            
-                                                            if(!empty($result_new)) {
-                                                                // If payment record exists, show actual balance
-                                                                echo $Balance_val;
-                                                            } else {
-                                                                // If no payment record, show total amount (course fee + registration)
-                                                                echo ($course_fee + $registration_fee);
-                                                            }
-                                                            ?>" readonly style="font-weight: bold; background-color: #fff3cd;">
-                                                        <small class="text-muted">Amount remaining after this payment</small>
-                                                        
-                                                        <input type="hidden" name="" class="form-control" id="balance_total"
-                                                            placeholder="Balance" value="<?php 
-                                                            if(!empty($result_new)) {
-                                                                echo $Balance_val;
-                                                            } else {
-                                                                echo ($course_fee + $registration_fee);
-                                                            }
-                                                            ?>">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-12 error_message text-danger"></div>
                                     </div>
 
-                                    <!-- Hidden Fields -->
-                                    <input type="hidden" name="phone" class="form-control" id="phone" required="required" value="<?= isset($results['phonenumber']) ? $results['phonenumber'] : ''; ?>">
+                                    <div class="form-row">
+                                        <div class="form-group col-md-12">
 
-                                    <!-- Error Messages -->
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="error_message text-danger"></div>
-                                        </div>
-                                    </div>
+                                            <button type="submit" name="submit" class="btn btn-primary" id="submit_btn">Make Payment</button>
+                                            <a href="manage-candidate.php" class="btn btn-danger">Skip</a>
 
-                                    <!-- Action Buttons -->
-                                    <div class="card">
-                                        <div class="card-body text-center">
-                                            <button type="submit" name="submit" class="btn btn-primary btn-lg me-2" id="submit_btn">
-                                                <i class="fas fa-credit-card"></i> Make Payment
-                                            </button>
-                                            
-                                            <a href="manage-candidate.php" class="btn btn-danger btn-lg me-2">
-                                                <i class="fas fa-arrow-left"></i> Back to Candidates
-                                            </a>
+                                            <button type="button" class="btn btn-success" onClick='p_all_data(<?php echo $last_id; ?>)' data-toggle="modal" data-target="#p_myModal">Print</td></button>
 
-                                            <button type="button" class="btn btn-success btn-lg" onClick='p_all_data(<?php echo isset($last_id) ? $last_id : $_GET['last_id']; ?>)' data-toggle="modal" data-target="#p_myModal">
-                                                <i class="fas fa-print"></i> Print Receipt
-                                            </button>
                                         </div>
                                     </div>
 
@@ -1178,18 +1059,19 @@ if (strlen($_SESSION['alogin']) == "") {
 
 
         $('#discount,#paid').on('input',function(){
-            var total_fee_amount = <?php echo isset($payment_val) ? $payment_val : 100; ?>; // Total fee including registration
-            var already_paid = <?php echo isset($Paid_val) ? $Paid_val : 0; ?>; // Amount already paid
+            var total_fee = $('#balance_total').val();
             
-            var discount = parseFloat($('#discount').val()) || 0;
-            var paying_now = parseFloat($('#paid').val()) || 0;
-            
-            // Calculate new balance: Total Fee - (Already Paid + Paying Now + Discount)
-            var remaining_balance = total_fee_amount - (already_paid + paying_now + discount);
-            $('#balance').val(remaining_balance);
+            var discount = $('#discount').val();
+            var paid = $('#paid').val();
+            $('#balance').val(total_fee - discount - paid);
 
-            if(remaining_balance < 0){
-                $('.error_message').html("Total payment cannot exceed the total fee amount!");
+            var balance = (total_fee - discount - paid).toFixed(2);
+
+
+
+            if(balance < 0){
+
+                $('.error_message').html("Paying amount cannot be more than the balance amount!");
                 $('#submit_btn').prop('disabled', true); // disable the button
             }else{
                 $('.error_message').html("");
