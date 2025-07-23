@@ -353,6 +353,11 @@ if (strlen($_SESSION['alogin']) == "") {
     if($Balance_val < 0) $Balance_val = 0;
     if(!isset($is_payment_complete)) $is_payment_complete = ($Paid_val >= $total_fee && $total_fee > 0);
 
+    // Debug for candidate 1768 (remove after fixing)
+    if($candidate_id == 1768) {
+        error_log("DEBUG Candidate 1768: payment_val=$payment_val, total_fee=$total_fee, Balance_val=$Balance_val, jobid=$jobid");
+    }
+
 
 ?>
 <!DOCTYPE html>
@@ -460,16 +465,18 @@ if (strlen($_SESSION['alogin']) == "") {
                                 <form method="post" enctype="multipart/form-data">
                                     <input type="hidden" name="candidate_id"  required="required" value="<?=$_GET['last_id']?>">
 
-                                    <!-- Debug Variables (Remove after testing) -->
-                                    <div class="alert alert-warning mb-3">
-                                        <small>
-                                            payment_val: <?= $payment_val ?? 'NULL' ?> | 
-                                            total_fee: <?= $total_fee ?? 'NULL' ?> | 
-                                            Balance_val: <?= $Balance_val ?? 'NULL' ?> | 
-                                            jobid: <?= $jobid ?? 'NULL' ?> |
-                                            candidate found: <?= isset($results) ? 'YES' : 'NO' ?>
-                                        </small>
-                                    </div>>
+                                    <!-- Temporary Debug for candidate 1768 -->
+                                    <?php if($candidate_id == 1768) { ?>
+                                    <div class="alert alert-info mb-3">
+                                        <strong>Debug for ID 1768:</strong><br>
+                                        payment_val: <?= $payment_val ?? 'NULL' ?><br>
+                                        total_fee: <?= $total_fee ?? 'NULL' ?><br>
+                                        Balance_val: <?= $Balance_val ?? 'NULL' ?><br>
+                                        jobid: <?= $jobid ?? 'NULL' ?><br>
+                                        candidate found: <?= isset($results) ? 'YES' : 'NO' ?><br>
+                                        result4: <?= isset($result4) ? json_encode($result4) : 'NULL' ?>
+                                    </div>
+                                    <?php } ?>>
 
                                     <div class="form-row">
                                         <div class="form-group col-md-6">
@@ -531,7 +538,7 @@ if (strlen($_SESSION['alogin']) == "") {
                                                     <div class="form-group">
                                                         <label for="course_fee">Course/Jobroll Fee</label>
                                                         <input type="text" class="form-control" id="course_fee" 
-                                                               value="₹<?php echo ($payment_val - 100 > 0) ? ($payment_val - 100) : 0; ?>" readonly>
+                                                               value="₹<?php echo isset($payment_val) && ($payment_val - 100 > 0) ? ($payment_val - 100) : 0; ?>" readonly>
                                                     </div>
                                                 </div>
                                             </div>
@@ -542,33 +549,33 @@ if (strlen($_SESSION['alogin']) == "") {
                                         <div class="form-group col-md-6">
                                             <label for="total_fee">Total Fee (Registration + Course)</label>
                                             <input type="text" name="total_fee" class="form-control" id="total_fee"
-                                                placeholder="Total Fee" value="<?=$payment_val?>" readonly>
+                                                placeholder="Total Fee" value="<?= isset($payment_val) ? $payment_val : 100 ?>" readonly>
                                         </div>
 
                                         <div class="form-group col-md-6">
                                             <label for="discount">Discount</label>
                                             <input type="number" name="discount" class="form-control" id="discount"
-                                                placeholder="Discount" value="0" <?php if($payment_val != $Balance_val) { echo 'readonly'; } ?> >
+                                                placeholder="Discount" value="0" <?php if(isset($payment_val) && isset($Balance_val) && $payment_val != $Balance_val) { echo 'readonly'; } ?> >
                                         </div>
 
                                         <div class="form-group col-md-6">
                                             <label for="paid">Pay</label>
                                             <input type="number" name="paid" class="form-control" id="paid"
-                                                placeholder="Paid" value="0" <?php if($is_payment_complete) { echo 'disabled readonly'; } ?>>
+                                                placeholder="Paid" value="0" <?php if(isset($is_payment_complete) && $is_payment_complete) { echo 'disabled readonly'; } ?>>
                                         </div>
 
                                         <div class="form-group col-md-6">
                                             <label for="balance">Balance</label>
                                             <input type="text" name="balance" class="form-control" id="balance"
-                                                placeholder="Balance" value="<?=$Balance_val?>" <?php if($is_payment_complete) { echo 'disabled readonly'; } ?>>
+                                                placeholder="Balance" value="<?= isset($Balance_val) ? $Balance_val : 100 ?>" <?php if(isset($is_payment_complete) && $is_payment_complete) { echo 'disabled readonly'; } ?>>
 
                                                 <input type="hidden" name="" class="form-control" id="balance_total"
-                                                placeholder="Balance" value="<?=$Balance_val?>">
+                                                placeholder="Balance" value="<?= isset($Balance_val) ? $Balance_val : 100 ?>">
                                         </div>
 
                                         <div class="form-group col-md-6">
                                             <label for="payment_mode">Payment Mode</label>
-                                            <select name="payment_mode" id="payment_mode" class="form-control" required <?php if($is_payment_complete) { echo 'disabled'; } ?>>
+                                            <select name="payment_mode" id="payment_mode" class="form-control" required <?php if(isset($is_payment_complete) && $is_payment_complete) { echo 'disabled'; } ?>>
                                                 <option value="">Select Payment Mode</option>
                                                 <option value="Online">Online</option>
                                                 <option value="Cash">Cash</option>
@@ -580,7 +587,7 @@ if (strlen($_SESSION['alogin']) == "") {
                                         <div class="form-group col-md-12 error_message text-danger"></div>
                                     </div>
 
-                                    <?php if($is_payment_complete) { ?>
+                                    <?php if(isset($is_payment_complete) && $is_payment_complete) { ?>
                                     <div class="alert alert-success">
                                         <i class="fas fa-check-circle"></i> <strong>Payment Complete!</strong> This candidate has paid the full amount. No further payments are required.
                                     </div>
@@ -588,14 +595,14 @@ if (strlen($_SESSION['alogin']) == "") {
 
                                     <div class="form-row">
                                         <div class="form-group col-md-12">
-                                            <?php if(!$is_payment_complete) { ?>
+                                            <?php if(!isset($is_payment_complete) || !$is_payment_complete) { ?>
                                             <button type="submit" name="submit" class="btn btn-primary" id="submit_btn">Make Payment</button>
                                             <?php } else { ?>
                                             <button type="button" class="btn btn-secondary" disabled>Payment Complete</button>
                                             <?php } ?>
                                             <a href="manage-candidate.php" class="btn btn-danger">Back to Candidates</a>
 
-                                            <button type="button" class="btn btn-success" onClick='p_all_data(<?php echo $last_id; ?>)' data-toggle="modal" data-target="#p_myModal">Print</button>
+                                            <button type="button" class="btn btn-success" onClick='p_all_data(<?php echo isset($last_id) ? $last_id : $_GET['last_id']; ?>)' data-toggle="modal" data-target="#p_myModal">Print</button>
 
                                         </div>
                                     </div>
