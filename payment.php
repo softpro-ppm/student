@@ -26,8 +26,9 @@ if (strlen($_SESSION['alogin']) == "") {
     // Fetch all rows associated with the candidate_id
     $result = $checkQuery->fetchAll(PDO::FETCH_ASSOC);
 
-    $Balance_val = $row['total_fee'];
-    $total_fee= $row['total_fee'];
+    // Initialize variables
+    $Balance_val = 0;
+    $total_fee = 0;
 
     if (!empty($result)) {
         // Candidate exists, show the data
@@ -39,7 +40,6 @@ if (strlen($_SESSION['alogin']) == "") {
                 $Balance_val = $row['total_fee'];
             }else{
                 $Balance_val = $row['balance'];
-                $Balance_val = $row['total_fee'];
             }
             
             
@@ -86,13 +86,19 @@ if (strlen($_SESSION['alogin']) == "") {
 
         if ($recordExists) {
 
-
+            // Get the amount being paid now from the form
+            $amount_paying_now = $_POST['paid'];
             $balance = $_POST['balance'];
             
-            $paid = $_POST['total_fee'] - $_POST['balance'];
+            // Calculate total paid: existing paid amount + current payment
+            $total_paid_so_far = $Paid_val + $amount_paying_now;
+            
+            // Calculate new balance: total fee - total paid so far
+            $new_balance = $_POST['total_fee'] - $total_paid_so_far;
 
-            if($total_fee == $paid){
+            if($new_balance <= 0){
                 $status = "Paid";
+                $new_balance = 0;
             }else{
                 $status = "Pending";
             }
@@ -106,8 +112,8 @@ if (strlen($_SESSION['alogin']) == "") {
 
             // Bind parameters
             $updateQuery->bindParam(':discount', $discount, PDO::PARAM_STR); // Adjust type if needed
-            $updateQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
-            $updateQuery->bindParam(':balance', $balance, PDO::PARAM_STR);
+            $updateQuery->bindParam(':paid', $total_paid_so_far, PDO::PARAM_STR);
+            $updateQuery->bindParam(':balance', $new_balance, PDO::PARAM_STR);
             $updateQuery->bindParam(':created_at', $created_at, PDO::PARAM_STR);
             $updateQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT); // Ensure candidate_id is bound
             $updateQuery->bindParam(':status', $status, PDO::PARAM_STR); // Ensure candidate_id is bound
@@ -116,12 +122,12 @@ if (strlen($_SESSION['alogin']) == "") {
             // Execute the query
             $updateQuery->execute();
 
-            $paid = $_POST['discount'] + $_POST['paid'];
+            $paid_for_emi = $_POST['discount'] + $_POST['paid'];
             $payment_mode = $_POST['payment_mode'];
             $insertSql = "INSERT INTO emi_list (candidate_id, paid, created,added_type,payment_mode ) VALUES ( :candidate_id, :paid, :created,:added_type,:payment_mode )";
             $insertQuery = $dbh->prepare($insertSql);
             $insertQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-            $insertQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
+            $insertQuery->bindParam(':paid', $paid_for_emi, PDO::PARAM_STR);
             $insertQuery->bindParam(':created', $created, PDO::PARAM_STR);
             $insertQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
             $insertQuery->bindParam(':payment_mode', $payment_mode, PDO::PARAM_STR);
@@ -133,7 +139,7 @@ if (strlen($_SESSION['alogin']) == "") {
             // inserting data in account 
 		
             	
-            if($paid != 0){
+            if($paid_for_emi != 0){
                 // Include your database connection
                 include 'includes/account.php'; // $acc connection defined here
                 
@@ -144,8 +150,8 @@ if (strlen($_SESSION['alogin']) == "") {
                 $description = $name;
                 $category = 'Student                  ';
                 $subcategory = 'Student Fees';
-                $amount = $paid;       // Example: 10000.00
-                $received = $paid;     // Example: 10000.00
+                $amount = $paid_for_emi;       // Example: 10000.00
+                $received = $paid_for_emi;     // Example: 10000.00
                 $balance = 0;             // Can also calculate: $amount - $received
                 $student_id = $candidate_id; // Must be defined before
                 
@@ -191,36 +197,48 @@ if (strlen($_SESSION['alogin']) == "") {
 		// end account section
 
         } else {
-            //$balance = $total_fee-($_POST['paid']);
-            $balance = $_POST['balance'];
-            //$paid = $Paid_val+$_POST['paid']+$_POST['discount'];
-            $paid = $_POST['total_fee'] - $_POST['balance'];
+            // New payment record - first time payment
+            $amount_paying_now = $_POST['paid'];
+            $total_fee_amount = $_POST['total_fee'];
+            
+            // For new record, paid amount is just what they're paying now
+            $total_paid = $amount_paying_now + $_POST['discount'];
+            $balance = $total_fee_amount - $total_paid;
+            
+            if($balance <= 0){
+                $balance = 0;
+                $status = "Paid";
+            } else {
+                $status = "Pending";
+            }
+            
             // Insert new record
             $insertSql = "INSERT INTO payment (
-                enrollmentid, candidate_id, discount, paid, balance, total_fee, created_at,added_type
+                enrollmentid, candidate_id, discount, paid, balance, total_fee, created_at, status, added_type
             ) VALUES (
-                :enrollmentid, :candidate_id, :discount, :paid, :balance, :total_fee, :created_at,:added_type
+                :enrollmentid, :candidate_id, :discount, :paid, :balance, :total_fee, :created_at, :status, :added_type
             )";
             $insertQuery = $dbh->prepare($insertSql);
             $insertQuery->bindParam(':enrollmentid', $enrollmentid, PDO::PARAM_STR);
             $insertQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
             $insertQuery->bindParam(':discount', $discount, PDO::PARAM_STR);
-            $insertQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
+            $insertQuery->bindParam(':paid', $total_paid, PDO::PARAM_STR);
             $insertQuery->bindParam(':balance', $balance, PDO::PARAM_STR);
-            $insertQuery->bindParam(':total_fee', $total_fee, PDO::PARAM_STR);
+            $insertQuery->bindParam(':total_fee', $total_fee_amount, PDO::PARAM_STR);
             $insertQuery->bindParam(':created_at', $created_at, PDO::PARAM_STR);
+            $insertQuery->bindParam(':status', $status, PDO::PARAM_STR);
             $insertQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
             $insertQuery->execute();
 
             $lastInsertId = $dbh->lastInsertId();
 
-            $paid = $_POST['discount'] + $_POST['paid'];
+            $paid_for_emi_new = $_POST['discount'] + $_POST['paid'];
             $payment_mode = $_POST['payment_mode'];
 
             $insertSql = "INSERT INTO emi_list (candidate_id, paid, created ,added_type,payment_mode) VALUES ( :candidate_id, :paid, :created ,:added_type,:payment_mode)";
             $insertQuery = $dbh->prepare($insertSql);
             $insertQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-            $insertQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
+            $insertQuery->bindParam(':paid', $paid_for_emi_new, PDO::PARAM_STR);
             $insertQuery->bindParam(':created', $created, PDO::PARAM_STR);
             $insertQuery->bindParam(':added_type', $_SESSION['user_type'], PDO::PARAM_STR);
             $insertQuery->bindParam(':payment_mode', $payment_mode, PDO::PARAM_STR);
@@ -236,7 +254,7 @@ if (strlen($_SESSION['alogin']) == "") {
             // inserting data in account 
 		
             	
-            if($paid != 0){
+            if($paid_for_emi_new != 0){
                 // Include your database connection
                 include 'includes/account.php'; // $acc connection defined here
                 
@@ -247,8 +265,8 @@ if (strlen($_SESSION['alogin']) == "") {
                 $description = $name;
                 $category = 'Student                  ';
                 $subcategory = 'Student Fees';
-                $amount = $paid;       // Example: 10000.00
-                $received = $paid;     // Example: 10000.00
+                $amount = $paid_for_emi_new;       // Example: 10000.00
+                $received = $paid_for_emi_new;     // Example: 10000.00
                 $balance = 0;             // Can also calculate: $amount - $received
                 $student_id = $candidate_id; // Must be defined before
                 
@@ -1160,18 +1178,18 @@ if (strlen($_SESSION['alogin']) == "") {
 
 
         $('#discount,#paid').on('input',function(){
-            var total_fee = $('#balance_total').val();
-            var course_fee = <?php echo isset($result4) && isset($result4['payment']) ? $result4['payment'] : 0; ?>; // Get course fee amount
+            var total_fee_amount = <?php echo isset($payment_val) ? $payment_val : 100; ?>; // Total fee including registration
+            var already_paid = <?php echo isset($Paid_val) ? $Paid_val : 0; ?>; // Amount already paid
             
-            var discount = $('#discount').val();
-            var paid = $('#paid').val();
+            var discount = parseFloat($('#discount').val()) || 0;
+            var paying_now = parseFloat($('#paid').val()) || 0;
             
-            // Calculate remaining balance: Course Fee - Paid Amount (excluding registration fee from calculation)
-            var remaining_balance = course_fee - paid + 100; // Add back registration fee to remaining balance
+            // Calculate new balance: Total Fee - (Already Paid + Paying Now + Discount)
+            var remaining_balance = total_fee_amount - (already_paid + paying_now + discount);
             $('#balance').val(remaining_balance);
 
             if(remaining_balance < 0){
-                $('.error_message').html("Paying amount cannot be more than the course fee amount!");
+                $('.error_message').html("Total payment cannot exceed the total fee amount!");
                 $('#submit_btn').prop('disabled', true); // disable the button
             }else{
                 $('.error_message').html("");
