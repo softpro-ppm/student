@@ -503,9 +503,9 @@ if (strlen($_SESSION['alogin']) == "") {
 
                                     <!-- Payment Breakdown Section -->
                                     <div class="card mt-3 mb-3">
-                                        <div class="card-header bg-primary text-white">
-                                            <h6 class="mb-0">Payment Breakdown</h6>
-                                        </div>
+                                      <!--  <div class="card-header bg-primary text-white">
+                                           <h6 class="mb-0">Payment Breakdown</h6>
+                                        </div>. -->
                                         <div class="card-body">
                                             <div class="row">
                                                 <div class="col-md-6">
