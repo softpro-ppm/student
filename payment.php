@@ -498,32 +498,23 @@ if (strlen($_SESSION['alogin']) == "") {
                                         </div>
                                     </div>
 
-                                    <!-- Payment Breakdown Section -->
-                                    <div class="card mt-3 mb-3">
-                                      <!--  <div class="card-header bg-primary text-white">
-                                           <h6 class="mb-0">Payment Breakdown</h6>
-                                        </div>. -->
-                                        <div class="card-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="registration_fee">Registration Fee</label>
-                                                        <input type="text" class="form-control" id="registration_fee" 
-                                                               value="₹100" readonly>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="course_fee">Course/Jobroll Fee</label>
-                                                        <input type="text" class="form-control" id="course_fee" 
-                                                               value="₹<?php echo isset($payment_val) && ($payment_val - 100 > 0) ? ($payment_val - 100) : 0; ?>" readonly>
-                                                    </div>
-                                                </div>
-                                            </div>
+                 
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="registration_fee">Registration Fee</label>
+                                            <input type="text" class="form-control" id="registration_fee" 
+                                                    value="₹100" readonly>
                                         </div>
                                     </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="course_fee">Course/Jobroll Fee</label>
+                                            <input type="text" class="form-control" id="course_fee" 
+                                                    value="₹<?php echo isset($payment_val) && ($payment_val - 100 > 0) ? ($payment_val - 100) : 0; ?>" readonly>
+                                        </div>
+                                    </div>
+                                            
 
-                                    <div class="form-row">
                                         <div class="form-group col-md-6">
                                             <label for="total_fee">Total Fee (Registration + Course)</label>
                                             <input type="text" name="total_fee" class="form-control" id="total_fee"
