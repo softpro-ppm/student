@@ -490,10 +490,7 @@ if (strlen($_SESSION['alogin']) == "") {
                                                 class="form-control" id="fathername"
                                                 placeholder="Enter Father Name" value="<?= isset($results['fathername']) ? $results['fathername'] : ''; ?>">
                                         </div>
-                                    </div>
 
-                                
-                                    <div class="form-row">
                                         <div class="form-group col-md-6">
                                             <label for="village">Village</label>
                                             <input type="text" name="village" class="form-control" id="village"
