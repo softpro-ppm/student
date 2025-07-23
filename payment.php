@@ -593,11 +593,30 @@ if (strlen($_SESSION['alogin']) == "") {
                                                     <div class="form-group">
                                                         <label for="balance"><strong>Remaining Balance</strong></label>
                                                         <input type="text" name="balance" class="form-control" id="balance"
-                                                            placeholder="Remaining balance" value="<?= isset($Balance_val) ? $Balance_val : (isset($payment_val) ? $payment_val : 100) ?>" readonly style="font-weight: bold; background-color: #fff3cd;">
+                                                            placeholder="Remaining balance" value="<?php 
+                                                            // Calculate remaining balance: Course Fee - Already Paid + Registration Fee
+                                                            $course_fee = isset($result4) && isset($result4['payment']) ? $result4['payment'] : 0;
+                                                            $already_paid = isset($Paid_val) ? $Paid_val : 0;
+                                                            $registration_fee = 100;
+                                                            
+                                                            if(!empty($result_new)) {
+                                                                // If payment record exists, show actual balance
+                                                                echo $Balance_val;
+                                                            } else {
+                                                                // If no payment record, show total amount (course fee + registration)
+                                                                echo ($course_fee + $registration_fee);
+                                                            }
+                                                            ?>" readonly style="font-weight: bold; background-color: #fff3cd;">
                                                         <small class="text-muted">Amount remaining after this payment</small>
                                                         
                                                         <input type="hidden" name="" class="form-control" id="balance_total"
-                                                            placeholder="Balance" value="<?= isset($Balance_val) ? $Balance_val : (isset($payment_val) ? $payment_val : 100) ?>">
+                                                            placeholder="Balance" value="<?php 
+                                                            if(!empty($result_new)) {
+                                                                echo $Balance_val;
+                                                            } else {
+                                                                echo ($course_fee + $registration_fee);
+                                                            }
+                                                            ?>">
                                                     </div>
                                                 </div>
                                             </div>
@@ -1141,18 +1160,17 @@ if (strlen($_SESSION['alogin']) == "") {
 
         $('#discount,#paid').on('input',function(){
             var total_fee = $('#balance_total').val();
+            var course_fee = <?php echo isset($result4) && isset($result4['payment']) ? $result4['payment'] : 0; ?>; // Get course fee amount
             
             var discount = $('#discount').val();
             var paid = $('#paid').val();
-            $('#balance').val(total_fee - discount - paid);
+            
+            // Calculate remaining balance: Course Fee - Paid Amount (excluding registration fee from calculation)
+            var remaining_balance = course_fee - paid + 100; // Add back registration fee to remaining balance
+            $('#balance').val(remaining_balance);
 
-            var balance = (total_fee - discount - paid).toFixed(2);
-
-
-
-            if(balance < 0){
-
-                $('.error_message').html("Paying amount cannot be more than the balance amount!");
+            if(remaining_balance < 0){
+                $('.error_message').html("Paying amount cannot be more than the course fee amount!");
                 $('#submit_btn').prop('disabled', true); // disable the button
             }else{
                 $('.error_message').html("");
