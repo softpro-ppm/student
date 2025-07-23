@@ -541,7 +541,13 @@ if (strlen($_SESSION['alogin']) == "") {
                                                     <div class="form-group">
                                                         <label for="course_fee">Course/Jobroll Fee</label>
                                                         <input type="text" class="form-control" id="course_fee" 
-                                                               value="₹<?php echo isset($payment_val) && ($payment_val - 100 > 0) ? ($payment_val - 100) : 0; ?>" readonly>
+                                                               value="₹<?php 
+                                                               if(isset($result4) && isset($result4['payment'])) {
+                                                                   echo $result4['payment']; // Show the original job roll payment amount
+                                                               } else {
+                                                                   echo '0';
+                                                               }
+                                                               ?>" readonly>
                                                         <small class="text-muted">Training course fee</small>
                                                     </div>
                                                 </div>
