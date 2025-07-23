@@ -524,8 +524,8 @@ if (strlen($_SESSION['alogin']) == "") {
 
                                     <!-- Candidate Information Section -->
                                     <div class="card mb-4">
-                                        <div class="card-header bg-info text-white">
-                                            <h6 class="mb-0"><i class="fas fa-user"></i> Candidate Information</h6>
+                                        <div class="card-header bg-info text-white py-2">
+                                            <h6 class="mb-0" style="font-size: 14px;"><i class="fas fa-user me-2"></i> Candidate Information</h6>
                                         </div>
                                         <div class="card-body">
                                             <div class="row">
@@ -591,8 +591,8 @@ if (strlen($_SESSION['alogin']) == "") {
 
                                     <!-- Payment Breakdown Section -->
                                     <div class="card mb-4">
-                                        <div class="card-header bg-primary text-white">
-                                            <h6 class="mb-0"><i class="fas fa-calculator"></i> Fee Breakdown</h6>
+                                        <div class="card-header bg-primary text-white py-2">
+                                            <h6 class="mb-0" style="font-size: 14px;"><i class="fas fa-calculator me-2"></i> Fee Breakdown</h6>
                                         </div>
                                         <div class="card-body">
                                             <div class="row">
@@ -636,8 +636,8 @@ if (strlen($_SESSION['alogin']) == "") {
 
                                     <!-- Payment Transaction Section -->
                                     <div class="card mb-4">
-                                        <div class="card-header bg-success text-white">
-                                            <h6 class="mb-0"><i class="fas fa-money-bill-wave"></i> Payment Transaction</h6>
+                                        <div class="card-header bg-success text-white py-2">
+                                            <h6 class="mb-0" style="font-size: 14px;"><i class="fas fa-money-bill-wave me-2"></i> Payment Transaction</h6>
                                         </div>
                                         <div class="card-body">
                                             <div class="row">
