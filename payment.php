@@ -353,12 +353,6 @@ if (strlen($_SESSION['alogin']) == "") {
     if($Balance_val < 0) $Balance_val = 0;
     if(!isset($is_payment_complete)) $is_payment_complete = ($Paid_val >= $total_fee && $total_fee > 0);
 
-    // Debug for candidate 1768 (remove after fixing)
-    if($candidate_id == 1768) {
-        error_log("DEBUG Candidate 1768: payment_val=$payment_val, total_fee=$total_fee, Balance_val=$Balance_val, jobid=$jobid");
-    }
-
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -464,19 +458,6 @@ if (strlen($_SESSION['alogin']) == "") {
                             <div class="table-responsive">
                                 <form method="post" enctype="multipart/form-data">
                                     <input type="hidden" name="candidate_id"  required="required" value="<?=$_GET['last_id']?>">
-
-                                    <!-- Temporary Debug for candidate 1768 -->
-                                    <?php if($candidate_id == 1768) { ?>
-                                    <div class="alert alert-info mb-3">
-                                        <strong>Debug for ID 1768:</strong><br>
-                                        payment_val: <?= $payment_val ?? 'NULL' ?><br>
-                                        total_fee: <?= $total_fee ?? 'NULL' ?><br>
-                                        Balance_val: <?= $Balance_val ?? 'NULL' ?><br>
-                                        jobid: <?= $jobid ?? 'NULL' ?><br>
-                                        candidate found: <?= isset($results) ? 'YES' : 'NO' ?><br>
-                                        result4: <?= isset($result4) ? json_encode($result4) : 'NULL' ?>
-                                    </div>
-                                    <?php } ?>
 
                                     <div class="form-row">
                                         <div class="form-group col-md-6">
@@ -728,16 +709,6 @@ if (strlen($_SESSION['alogin']) == "") {
                                         <h4 class="modal-title">Payment Receipt</h4>
                                       </div>
                                       <div class="modal-body" id="p_myModals">
-
-
-
-                                        <!DOCTYPE html>
-                                        <html lang="en">
-                                        <head>
-                                            <meta charset="UTF-8">
-                                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                            <title>Payment Receipt</title>
-                                            <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"> -->
                                             <style>
                                                 .receipt {
                                                     width: 100%;
@@ -899,8 +870,6 @@ if (strlen($_SESSION['alogin']) == "") {
                                                     }
                                                 }
                                             </style>
-                                        </head>
-                                        <body>
                                             <div class="receipt">
                                                 <div class="receipt-header">
                                                     <table class="table">
@@ -1000,9 +969,6 @@ if (strlen($_SESSION['alogin']) == "") {
                                                     <p><strong>Ph:</strong> 7799773656</p>
                                                 </div>
                                             </div>
-                                        </body>
-                                        </html>
-
 
                                         
                                         
@@ -1059,19 +1025,6 @@ if (strlen($_SESSION['alogin']) == "") {
     <script src="js/prism/prism.js"></script>
     <script src="js/select2/select2.min.js"></script>
     <script src="js/main.js"></script>
-
-
-           <script src="js/jquery/jquery-2.2.4.min.js"></script>
-        <script src="https://code.jquery.com/ui/1.14.1/jquery-ui.js"></script>
-
-        <script src="js/bootstrap/bootstrap.min.js"></script>
-        <script src="js/pace/pace.min.js"></script>
-        <script src="js/lobipanel/lobipanel.min.js"></script>
-        <script src="js/iscroll/iscroll.js"></script>
-        <script src="js/prism/prism.js"></script>
-        <script src="js/select2/select2.min.js"></script>
-        <script src="js/main.js"></script>
-        
 
     <script>
         $(function($) {
@@ -1175,31 +1128,5 @@ if (strlen($_SESSION['alogin']) == "") {
     
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 <?PHP } ?>
