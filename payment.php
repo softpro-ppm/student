@@ -411,6 +411,69 @@ if (strlen($_SESSION['alogin']) == "") {
             color: #155724;
         }
 
+        /* Enhanced Form Styling */
+        .card {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .card-header {
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+            font-weight: 600;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        
+        .btn-lg {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 5px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-lg:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .bg-info {
+            background: linear-gradient(135deg, #17a2b8, #138496) !important;
+        }
+        
+        .bg-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3) !important;
+        }
+        
+        .bg-success {
+            background: linear-gradient(135deg, #28a745, #1e7e34) !important;
+        }
+        
+        .form-control[readonly] {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+        
+        small.text-muted {
+            font-style: italic;
+            color: #6c757d !important;
+        }
+
     </style>
 </head>
 
@@ -459,120 +522,186 @@ if (strlen($_SESSION['alogin']) == "") {
                                 <form method="post" enctype="multipart/form-data">
                                     <input type="hidden" name="candidate_id"  required="required" value="<?=$_GET['last_id']?>">
 
-                                    <div class="form-row">
-                                        <div class="form-group col-md-6">
-                                            <label for="enrollmentid">Enrollment ID</label>
-                                            <input type="text" name="enrollmentid" class="form-control"
-                                                id="enrollmentid" required="required"
-                                                placeholder="Enrollment ID" value="<?=$enroll?>">
+                                    <!-- Candidate Information Section -->
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-info text-white">
+                                            <h6 class="mb-0"><i class="fas fa-user"></i> Candidate Information</h6>
                                         </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="enrollmentid">Enrollment ID</label>
+                                                        <input type="text" name="enrollmentid" class="form-control"
+                                                            id="enrollmentid" required="required"
+                                                            placeholder="Enrollment ID" value="<?=$enroll?>">
+                                                    </div>
+                                                </div>
 
-                                        <div class="form-group col-md-6">
-                                            <label for="created_at">Created Date</label>
-                                            <input type="text" name="created_at" class="form-control"
-                                                id="datepicker" required="required"
-                                                placeholder="Created Date" value="<?=date('d-m-Y'); ?>">
-                                        </div>
-                                        
-                                        <div class="form-group col-md-6">
-                                            <label for="candidatename">Full Name</label>
-                                            <input type="text" name="candidatename" class="form-control"
-                                                id="candidatename" required="required"
-                                                placeholder="Enter Full Name" value="<?= isset($results['candidatename']) ? $results['candidatename'] : ''; ?>">
-                                        </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="candidatename">Full Name</label>
+                                                        <input type="text" name="candidatename" class="form-control"
+                                                            id="candidatename" required="required"
+                                                            placeholder="Enter Full Name" value="<?= isset($results['candidatename']) ? $results['candidatename'] : ''; ?>">
+                                                    </div>
+                                                </div>
 
-                                        <input type="hidden" name="phone" class="form-control"
-                                                id="phone" required="required" value="<?= isset($results['phonenumber']) ? $results['phonenumber'] : ''; ?>">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="fathername">Father Name</label>
+                                                        <input type="text" name="fathername" required="required"
+                                                            class="form-control" id="fathername"
+                                                            placeholder="Enter Father Name" value="<?= isset($results['fathername']) ? $results['fathername'] : ''; ?>">
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                        <div class="form-group col-md-6">
-                                            <label for="fathername">Father Name</label>
-                                            <input type="text" name="fathername" required="required"
-                                                class="form-control" id="fathername"
-                                                placeholder="Enter Father Name" value="<?= isset($results['fathername']) ? $results['fathername'] : ''; ?>">
-                                        </div>
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="village">Village</label>
+                                                        <input type="text" name="village" class="form-control" id="village"
+                                                            placeholder="Village" value="<?= isset($results['village']) ? $results['village'] : ''; ?>">
+                                                    </div>
+                                                </div>
 
-                                        <div class="form-group col-md-6">
-                                            <label for="village">Village</label>
-                                            <input type="text" name="village" class="form-control" id="village"
-                                                placeholder="Village" value="<?= isset($results['village']) ? $results['village'] : ''; ?>">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="created_at">Payment Date</label>
+                                                        <input type="text" name="created_at" class="form-control"
+                                                            id="datepicker" required="required"
+                                                            placeholder="Payment Date" value="<?=date('d-m-Y'); ?>">
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="payment_mode">Payment Mode</label>
+                                                        <select name="payment_mode" id="payment_mode" class="form-control" required <?php if(isset($is_payment_complete) && $is_payment_complete) { echo 'disabled'; } ?>>
+                                                            <option value="">Select Payment Mode</option>
+                                                            <option value="Online">Online</option>
+                                                            <option value="Cash">Cash</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                 
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="registration_fee">Registration Fee</label>
-                                            <input type="text" class="form-control" id="registration_fee" 
-                                                    value="₹100" readonly>
+                                    <!-- Payment Breakdown Section -->
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0"><i class="fas fa-calculator"></i> Fee Breakdown</h6>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="course_fee">Course/Jobroll Fee</label>
-                                            <input type="text" class="form-control" id="course_fee" 
-                                                    value="₹<?php echo isset($payment_val) && ($payment_val - 100 > 0) ? ($payment_val - 100) : 0; ?>" readonly>
-                                        </div>
-                                    </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="registration_fee">Registration Fee</label>
+                                                        <input type="text" class="form-control" id="registration_fee" 
+                                                               value="₹100" readonly>
+                                                        <small class="text-muted">One-time registration fee</small>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="course_fee">Course/Jobroll Fee</label>
+                                                        <input type="text" class="form-control" id="course_fee" 
+                                                               value="₹<?php echo isset($payment_val) && ($payment_val - 100 > 0) ? ($payment_val - 100) : 0; ?>" readonly>
+                                                        <small class="text-muted">Training course fee</small>
+                                                    </div>
+                                                </div>
+                                            </div>
                                             
-
-                                        <div class="form-group col-md-6">
-                                            <label for="total_fee">Total Fee (Registration + Course)</label>
-                                            <input type="text" name="total_fee" class="form-control" id="total_fee"
-                                                placeholder="Total Fee" value="<?= isset($payment_val) ? $payment_val : 100 ?>" readonly>
-                                        </div>
-
-                                        <div class="form-group col-md-6">
-                                            <label for="discount">Discount</label>
-                                            <input type="number" name="discount" class="form-control" id="discount"
-                                                placeholder="Discount" value="0" <?php if(isset($payment_val) && isset($Balance_val) && $payment_val != $Balance_val) { echo 'readonly'; } ?> >
-                                        </div>
-
-                                        <div class="form-group col-md-6">
-                                            <label for="paid">Pay</label>
-                                            <input type="number" name="paid" class="form-control" id="paid"
-                                                placeholder="Paid" value="0" <?php if(isset($is_payment_complete) && $is_payment_complete) { echo 'disabled readonly'; } ?>>
-                                        </div>
-
-                                        <div class="form-group col-md-6">
-                                            <label for="balance">Balance</label>
-                                            <input type="text" name="balance" class="form-control" id="balance"
-                                                placeholder="Balance" value="<?= isset($Balance_val) ? $Balance_val : 100 ?>" <?php if(isset($is_payment_complete) && $is_payment_complete) { echo 'disabled readonly'; } ?>>
-
-                                                <input type="hidden" name="" class="form-control" id="balance_total"
-                                                placeholder="Balance" value="<?= isset($Balance_val) ? $Balance_val : 100 ?>">
-                                        </div>
-
-                                        <div class="form-group col-md-6">
-                                            <label for="payment_mode">Payment Mode</label>
-                                            <select name="payment_mode" id="payment_mode" class="form-control" required <?php if(isset($is_payment_complete) && $is_payment_complete) { echo 'disabled'; } ?>>
-                                                <option value="">Select Payment Mode</option>
-                                                <option value="Online">Online</option>
-                                                <option value="Cash">Cash</option>
-                                            </select>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="total_fee"><strong>Total Fee (Registration + Course)</strong></label>
+                                                        <input type="text" name="total_fee" class="form-control" id="total_fee"
+                                                            placeholder="Total Fee" value="<?= isset($payment_val) ? $payment_val : 100 ?>" readonly style="font-weight: bold; background-color: #e9ecef;">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="discount">Discount Amount</label>
+                                                        <input type="number" name="discount" class="form-control" id="discount"
+                                                            placeholder="Enter discount amount" value="0" <?php if(isset($payment_val) && isset($Balance_val) && $payment_val != $Balance_val) { echo 'readonly'; } ?>>
+                                                        <small class="text-muted">Special discount if applicable</small>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="form-row">
-                                        <div class="form-group col-md-12 error_message text-danger"></div>
+                                    <!-- Payment Transaction Section -->
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-success text-white">
+                                            <h6 class="mb-0"><i class="fas fa-money-bill-wave"></i> Payment Transaction</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="paid"><strong>Amount Paying Now</strong></label>
+                                                        <input type="number" name="paid" class="form-control" id="paid"
+                                                            placeholder="Enter payment amount" value="0" <?php if(isset($is_payment_complete) && $is_payment_complete) { echo 'disabled readonly'; } ?> style="font-size: 16px; padding: 12px;">
+                                                        <small class="text-muted">Amount being paid in this transaction</small>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="balance"><strong>Remaining Balance</strong></label>
+                                                        <input type="text" name="balance" class="form-control" id="balance"
+                                                            placeholder="Remaining balance" value="<?= isset($Balance_val) ? $Balance_val : 100 ?>" readonly style="font-weight: bold; background-color: #fff3cd;">
+                                                        <small class="text-muted">Amount remaining after this payment</small>
+                                                        
+                                                        <input type="hidden" name="" class="form-control" id="balance_total"
+                                                            placeholder="Balance" value="<?= isset($Balance_val) ? $Balance_val : 100 ?>">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
+                                    <!-- Hidden Fields -->
+                                    <input type="hidden" name="phone" class="form-control" id="phone" required="required" value="<?= isset($results['phonenumber']) ? $results['phonenumber'] : ''; ?>">
+
+                                    <!-- Error Messages -->
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="error_message text-danger"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Payment Status Alert -->
                                     <?php if(isset($is_payment_complete) && $is_payment_complete) { ?>
                                     <div class="alert alert-success">
                                         <i class="fas fa-check-circle"></i> <strong>Payment Complete!</strong> This candidate has paid the full amount. No further payments are required.
                                     </div>
                                     <?php } ?>
 
-                                    <div class="form-row">
-                                        <div class="form-group col-md-12">
+                                    <!-- Action Buttons -->
+                                    <div class="card">
+                                        <div class="card-body text-center">
                                             <?php if(!isset($is_payment_complete) || !$is_payment_complete) { ?>
-                                            <button type="submit" name="submit" class="btn btn-primary" id="submit_btn">Make Payment</button>
+                                            <button type="submit" name="submit" class="btn btn-primary btn-lg me-2" id="submit_btn">
+                                                <i class="fas fa-credit-card"></i> Make Payment
+                                            </button>
                                             <?php } else { ?>
-                                            <button type="button" class="btn btn-secondary" disabled>Payment Complete</button>
+                                            <button type="button" class="btn btn-secondary btn-lg me-2" disabled>
+                                                <i class="fas fa-check"></i> Payment Complete
+                                            </button>
                                             <?php } ?>
-                                            <a href="manage-candidate.php" class="btn btn-danger">Back to Candidates</a>
+                                            
+                                            <a href="manage-candidate.php" class="btn btn-danger btn-lg me-2">
+                                                <i class="fas fa-arrow-left"></i> Back to Candidates
+                                            </a>
 
-                                            <button type="button" class="btn btn-success" onClick='p_all_data(<?php echo isset($last_id) ? $last_id : $_GET['last_id']; ?>)' data-toggle="modal" data-target="#p_myModal">Print</button>
-
+                                            <button type="button" class="btn btn-success btn-lg" onClick='p_all_data(<?php echo isset($last_id) ? $last_id : $_GET['last_id']; ?>)' data-toggle="modal" data-target="#p_myModal">
+                                                <i class="fas fa-print"></i> Print Receipt
+                                            </button>
                                         </div>
                                     </div>
 
