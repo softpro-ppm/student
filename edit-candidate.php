@@ -76,15 +76,7 @@ if (strlen($_SESSION['alogin']) == "") {
     // Execute the query and check for success
     if ($query->execute()) {
         $msg = "Data has been updated successfully";
-        
-        // Check if batch was assigned and redirect accordingly
-        if (!empty($batch) && $batch != 'Select') {
-            // If batch is assigned, redirect to payment page
-            echo '<script> setTimeout(function() { window.location.href = "payment.php?last_id=' . $cid . '"; }, 2000); </script>';
-        } else {
-            // If no batch assigned, redirect to manage candidate page
-            echo '<script> setTimeout(function() { window.location.href = "manage-candidate.php"; }, 2000); </script>';
-        }
+        echo '<script> setTimeout(function() { window.location.href = "payment.php?last_id=' . $cid . '"; }, 2000); </script>';
     } else {
         $error = "An error occurred while updating data.";
     }
