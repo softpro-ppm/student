@@ -46,7 +46,7 @@ if (strlen($_SESSION['alogin']) == "") {
 
       <!-- Main Content -->
       <main class="col-lg-10 col-md-9 p-4">
-        <h2 class="mb-4">Softpro Dashboard 123 </h2>
+        <h2 class="mb-4">Softpro Dashboard </h2>
         <div class="row g-3">
             <!-- Regd Candidates Card -->
             <div class="col-md-3">
