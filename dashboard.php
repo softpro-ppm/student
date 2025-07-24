@@ -29,8 +29,6 @@ if (strlen($_SESSION['alogin']) == "") {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Font Awesome 6 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="includes/style.css">
 
 </head>
@@ -275,71 +273,6 @@ if (strlen($_SESSION['alogin']) == "") {
                 </div>
             </div>
         </div><!-- /.row -->
-        
-        <?php
-        // Get student registration data for the past 6 months
-        // NOTE: This implementation uses CandidateId as a proxy for registration order
-        // For accurate results, consider adding a 'registration_date' or 'created_at' field to tblcandidate
-        // Then you can use: SELECT COUNT(*) FROM tblcandidate WHERE DATE_FORMAT(registration_date, '%Y-%m') = :month
-        
-        $registrationData = array();
-        $monthLabels = array();
-        
-        // Get the total number of candidates and their ID range
-        $sql = "SELECT COUNT(*) as total, MIN(CandidateId) as min_id, MAX(CandidateId) as max_id FROM tblcandidate";
-        $query = $dbh->prepare($sql);
-        $query->execute();
-        $result = $query->fetch(PDO::FETCH_ASSOC);
-        $totalCandidates = $result['total'];
-        $minId = $result['min_id'];
-        $maxId = $result['max_id'];
-        
-        for ($i = 5; $i >= 0; $i--) {
-            $monthLabel = date('M Y', strtotime("-$i months"));
-            
-            // Calculate approximate ID range for this month
-            // Assuming relatively even distribution of registrations
-            $monthProgress = (5 - $i) / 6; // 0 to 1
-            $idRangeStart = $minId + ($maxId - $minId) * ($monthProgress);
-            $idRangeEnd = $minId + ($maxId - $minId) * ($monthProgress + 1/6);
-            
-            // Count candidates in this ID range
-            $sql = "SELECT COUNT(*) as count FROM tblcandidate WHERE CandidateId >= :start_id AND CandidateId < :end_id";
-            $query = $dbh->prepare($sql);
-            $query->bindParam(':start_id', $idRangeStart, PDO::PARAM_INT);
-            $query->bindParam(':end_id', $idRangeEnd, PDO::PARAM_INT);
-            $query->execute();
-            $monthlyCount = $query->fetchColumn();
-            
-            // Add some randomization to make it look more realistic
-            if ($i == 0) { // Current month - might have fewer registrations
-                $monthlyCount = max(1, $monthlyCount - rand(0, 5));
-            }
-            
-            $registrationData[] = $monthlyCount;
-            $monthLabels[] = $monthLabel;
-        }
-        
-        // If all counts are 0, create sample data
-        if (array_sum($registrationData) == 0) {
-            $registrationData = [8, 12, 15, 20, 18, 10];
-        }
-        ?>
-        
-        <!-- Student Registration Chart -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Student Registrations - Past 6 Months</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="registrationChart" width="400" height="100"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
     </main>
     </div><!-- /.row -->
   </div><!-- /.container-fluid -->
@@ -356,90 +289,6 @@ if (strlen($_SESSION['alogin']) == "") {
   <script src="js/prism/prism.js"></script>
   <script src="js/select2/select2.min.js"></script>
   <script src="js/main.js"></script>
-  
-  <!-- Chart.js Script for Student Registration Chart -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const ctx = document.getElementById('registrationChart').getContext('2d');
-        
-        const registrationChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: <?php echo json_encode($monthLabels); ?>,
-                datasets: [{
-                    label: 'Student Registrations',
-                    data: <?php echo json_encode($registrationData); ?>,
-                    backgroundColor: [
-                        'rgba(54, 162, 235, 0.8)',
-                        'rgba(255, 99, 132, 0.8)',
-                        'rgba(255, 205, 86, 0.8)',
-                        'rgba(75, 192, 192, 0.8)',
-                        'rgba(153, 102, 255, 0.8)',
-                        'rgba(255, 159, 64, 0.8)'
-                    ],
-                    borderColor: [
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(255, 205, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 5,
-                    borderSkipped: false,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: 'white',
-                        bodyColor: 'white',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1,
-                            color: '#666'
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            color: '#666'
-                        },
-                        grid: {
-                            display: false
-                        }
-                    }
-                },
-                animation: {
-                    duration: 1000,
-                    easing: 'easeInOutQuart'
-                }
-            }
-        });
-        
-        // Resize chart container
-        document.getElementById('registrationChart').style.height = '300px';
-    });
-  </script>
 </body>
 </html>
 <?php } ?>

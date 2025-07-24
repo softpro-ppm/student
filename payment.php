@@ -11,34 +11,6 @@ if (strlen($_SESSION['alogin']) == "") {
 
     $last_id = $_GET['last_id'];
 
-    // Helper functions for registration fee management
-    function check_registration_fee_paid($dbh, $candidate_id) {
-        $sql = "SELECT COUNT(*) as count FROM emi_list WHERE candidate_id = :candidate_id AND payment_mode = 'Registration Fee'";
-        $query = $dbh->prepare($sql);
-        $query->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-        $query->execute();
-        $result = $query->fetch(PDO::FETCH_ASSOC);
-        return $result['count'] > 0;
-    }
-
-    function get_registration_fee_amount($dbh, $candidate_id) {
-        $sql = "SELECT SUM(paid) as total FROM emi_list WHERE candidate_id = :candidate_id AND payment_mode = 'Registration Fee'";
-        $query = $dbh->prepare($sql);
-        $query->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-        $query->execute();
-        $result = $query->fetch(PDO::FETCH_ASSOC);
-        return $result['total'] ?? 0;
-    }
-
-    function get_total_paid_amount($dbh, $candidate_id) {
-        $sql = "SELECT paid FROM payment WHERE candidate_id = :candidate_id";
-        $query = $dbh->prepare($sql);
-        $query->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
-        $query->execute();
-        $result = $query->fetch(PDO::FETCH_ASSOC);
-        return $result['paid'] ?? 0;
-    }
-
 
 
     $candidate_id = $last_id;
@@ -113,14 +85,12 @@ if (strlen($_SESSION['alogin']) == "") {
 
         if ($recordExists) {
 
+
             $balance = $_POST['balance'];
             
-            // Calculate paid amount including previous payments
-            $current_paid = get_total_paid_amount($dbh, $candidate_id);
-            $new_payment = $_POST['paid'];
-            $total_paid = $current_paid + $new_payment;
+            $paid = $_POST['total_fee'] - $_POST['balance'];
 
-            if($total_fee == $total_paid){
+            if($total_fee == $paid){
                 $status = "Paid";
             }else{
                 $status = "Pending";
@@ -135,7 +105,7 @@ if (strlen($_SESSION['alogin']) == "") {
 
             // Bind parameters
             $updateQuery->bindParam(':discount', $discount, PDO::PARAM_STR); // Adjust type if needed
-            $updateQuery->bindParam(':paid', $total_paid, PDO::PARAM_STR);
+            $updateQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
             $updateQuery->bindParam(':balance', $balance, PDO::PARAM_STR);
             $updateQuery->bindParam(':created_at', $created_at, PDO::PARAM_STR);
             $updateQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT); // Ensure candidate_id is bound
@@ -220,14 +190,10 @@ if (strlen($_SESSION['alogin']) == "") {
 		// end account section
 
         } else {
-            // For new payment record
+            //$balance = $total_fee-($_POST['paid']);
             $balance = $_POST['balance'];
-            
-            // Calculate total paid including registration fee
-            $reg_fee_paid = get_registration_fee_amount($dbh, $candidate_id);
-            $new_payment = $_POST['paid'];
-            $total_paid = $reg_fee_paid + $new_payment;
-            
+            //$paid = $Paid_val+$_POST['paid']+$_POST['discount'];
+            $paid = $_POST['total_fee'] - $_POST['balance'];
             // Insert new record
             $insertSql = "INSERT INTO payment (
                 enrollmentid, candidate_id, discount, paid, balance, total_fee, created_at,added_type
@@ -238,7 +204,7 @@ if (strlen($_SESSION['alogin']) == "") {
             $insertQuery->bindParam(':enrollmentid', $enrollmentid, PDO::PARAM_STR);
             $insertQuery->bindParam(':candidate_id', $candidate_id, PDO::PARAM_INT);
             $insertQuery->bindParam(':discount', $discount, PDO::PARAM_STR);
-            $insertQuery->bindParam(':paid', $total_paid, PDO::PARAM_STR);
+            $insertQuery->bindParam(':paid', $paid, PDO::PARAM_STR);
             $insertQuery->bindParam(':balance', $balance, PDO::PARAM_STR);
             $insertQuery->bindParam(':total_fee', $total_fee, PDO::PARAM_STR);
             $insertQuery->bindParam(':created_at', $created_at, PDO::PARAM_STR);
@@ -362,19 +328,14 @@ if (strlen($_SESSION['alogin']) == "") {
     // Fetch the first row
     $result4 = $query4->fetch(PDO::FETCH_ASSOC);
 
-    // Calculate total payment (Registration Fee + Job Roll Fee)
-    $registration_fee = 100;
-    $job_roll_fee = 0;
-    
     if ($result4 && isset($result4['payment'])) {
-        $job_roll_fee = $result4['payment'];
-    }
-    
-    // Total fee = Registration Fee + Job Roll Fee
-    $payment_val = $registration_fee + $job_roll_fee;
-    
-    if($total_fee =='0'){
-        $Balance_val = $payment_val;
+        $payment_val = $result4['payment'];
+        if($total_fee =='0'){
+            $Balance_val = $result4['payment'];
+        }
+
+    } else {
+       // echo "No payment record found for JobrollId: " . htmlspecialchars($jobid);
     }
 
 
@@ -393,14 +354,14 @@ if (strlen($_SESSION['alogin']) == "") {
             $Discount_val = '0';//$row['discount'];
             $Paid_val = $row['paid'];
             $total_fee= $row['total_fee'];
-            $Balance_val = $row['balance'];
+            //if($row['balance'] == ''){
+             //   $Balance_val = $row['total_fee'];
+            //}else{
+                $Balance_val = $row['balance'];
+            //}
+            
+            
         }
-    } else {
-        // No payment record exists yet, set defaults
-        $Discount_val = '0';
-        $Paid_val = get_registration_fee_amount($dbh, $candidate_id); // Include registration fee if paid
-        $total_fee = $payment_val; // This already includes registration + course fee
-        $Balance_val = $payment_val - $Paid_val;
     }
 
 
@@ -446,35 +407,6 @@ if (strlen($_SESSION['alogin']) == "") {
         .dt-button-collection {
             max-height: 300px; /* Adjust height as needed */
             overflow-y: auto !important;
-        }
-        
-        /* Fee breakdown styling */
-        .fee-breakdown {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
-        
-        .fee-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-        }
-        
-        .fee-total {
-            border-top: 1px solid #dee2e6;
-            padding-top: 5px;
-            font-weight: bold;
-        }
-        
-        .payment-summary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
         }
 
     </style>
@@ -567,48 +499,9 @@ if (strlen($_SESSION['alogin']) == "") {
                                         </div>
 
                                         <div class="form-group col-md-6">
-                                            <label><strong>Fee Breakdown</strong></label>
-                                            <div class="fee-breakdown">
-                                                <div class="fee-item">
-                                                    <span>Registration Fee:</span>
-                                                    <span>₹100</span>
-                                                </div>
-                                                <div class="fee-item">
-                                                    <span>Course Fee (<?php 
-                                                        // Get job roll name for display
-                                                        $job_name_sql = "SELECT jobrollname FROM tbljobroll WHERE JobrollId = :jobid";
-                                                        $job_name_query = $dbh->prepare($job_name_sql);
-                                                        $job_name_query->bindParam(':jobid', $jobid, PDO::PARAM_INT);
-                                                        $job_name_query->execute();
-                                                        $job_name_result = $job_name_query->fetch(PDO::FETCH_ASSOC);
-                                                        echo $job_name_result['jobrollname'] ?? 'Course';
-                                                    ?>):</span>
-                                                    <span>₹<?php echo $job_roll_fee; ?></span>
-                                                </div>
-                                                <div class="fee-item fee-total">
-                                                    <span>Total Fee:</span>
-                                                    <span>₹<?php echo $payment_val; ?></span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="form-group col-md-6">
-                                            <label for="total_fee"><strong>Total Fee</strong></label>
+                                            <label for="total_fee">Total Fee</label>
                                             <input type="text" name="total_fee" class="form-control" id="total_fee"
-                                                placeholder="Total Fee" value="<?=$payment_val?>" readonly style="font-weight: bold; background-color: #e9ecef;">
-                                        </div>
-
-                                        <div class="form-group col-md-6">
-                                            <label for="paid_amount_display"><strong>Already Paid</strong></label>
-                                            <input type="text" class="form-control" id="paid_amount_display"
-                                                value="<?php echo get_total_paid_amount($dbh, $candidate_id); ?>" readonly style="font-weight: bold; background-color: #e9ecef;">
-                                            <small class="text-muted">
-                                                <?php if (check_registration_fee_paid($dbh, $candidate_id)): ?>
-                                                    ✅ Registration fee paid
-                                                <?php else: ?>
-                                                    ⚠️ Registration fee pending
-                                                <?php endif; ?>
-                                            </small>
+                                                placeholder="Total Fee" value="<?=$payment_val?>" readonly>
                                         </div>
 
                                         <div class="form-group col-md-6">
@@ -618,9 +511,9 @@ if (strlen($_SESSION['alogin']) == "") {
                                         </div>
 
                                         <div class="form-group col-md-6">
-                                            <label for="paid">Pay Amount</label>
+                                            <label for="paid">Pay</label>
                                             <input type="number" name="paid" class="form-control" id="paid"
-                                                placeholder="Enter payment amount" value="0">
+                                                placeholder="Paid" value="0">
                                         </div>
 
                                         <div class="form-group col-md-6">
@@ -988,18 +881,6 @@ if (strlen($_SESSION['alogin']) == "") {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        <?php 
-                                                        // Check if registration fee was paid
-                                                        $reg_fee_paid = check_registration_fee_paid($dbh, $candidate_id);
-                                                        if ($reg_fee_paid): 
-                                                        ?>
-                                                        <tr>
-                                                            <td><b>Paid On :Registration Fee</b></td>
-                                                            <td><b><?=date("M d, Y")?></b></td>
-                                                            <td class="text-right"><b>100</b></td>
-                                                        </tr>
-                                                        <?php endif; ?>
-                                                        
                                                         <?php if (!empty($emi_result)): ?>
                                                             <?php foreach ($emi_result as $row): ?>
 
@@ -1010,7 +891,7 @@ if (strlen($_SESSION['alogin']) == "") {
                                                                  
                                                                  ?>
 
-                                                            <?php if($row['paid'] !=0 && $row['payment_mode'] != 'Registration Fee'){ ?>
+                                                            <?php if($row['paid'] !=0){ ?>
                                                             
                                                             <tr>
                                                                 <td><b>Paid On :<?php echo htmlspecialchars($row['payment_mode']); ?> </b></td>
@@ -1178,18 +1059,18 @@ if (strlen($_SESSION['alogin']) == "") {
 
 
         $('#discount,#paid').on('input',function(){
-            var total_fee = parseFloat($('#balance_total').val());
-            var current_paid = parseFloat($('#paid_amount_display').val()) || 0;
+            var total_fee = $('#balance_total').val();
             
-            var discount = parseFloat($('#discount').val()) || 0;
-            var new_payment = parseFloat($('#paid').val()) || 0;
-            
-            // Calculate new balance: total_fee - current_paid - discount - new_payment
-            var balance = total_fee - current_paid - discount - new_payment;
-            
-            $('#balance').val(balance.toFixed(2));
+            var discount = $('#discount').val();
+            var paid = $('#paid').val();
+            $('#balance').val(total_fee - discount - paid);
+
+            var balance = (total_fee - discount - paid).toFixed(2);
+
+
 
             if(balance < 0){
+
                 $('.error_message').html("Paying amount cannot be more than the balance amount!");
                 $('#submit_btn').prop('disabled', true); // disable the button
             }else{

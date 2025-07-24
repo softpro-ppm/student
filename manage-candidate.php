@@ -103,17 +103,15 @@ if (strlen($_SESSION['alogin']) == "") {
                     <div class="card">
                         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Candidate Information</h5>
-                            <div class="d-flex gap-2">
-                                <?php if(isset($_GET['batch'])){ ?>
-                                    <a href="add-candidate-to-particular-batch.php?batchid=<?php echo $_GET['batch']; ?>" class="btn btn-success">
-                                        <i class="fas fa-plus"></i> Add Candidate
-                                    </a>
-                                <?php } else { ?>
-                                    <a href="add-candidate.php" class="btn btn-success">
-                                        <i class="fas fa-plus"></i> Add Candidate
-                                    </a>
-                                <?php } ?>
-                            </div>
+                            <?php if(isset($_GET['batch'])){ ?>
+                                <a href="add-candidate-to-particular-batch.php?batchid=<?php echo $_GET['batch']; ?>" class="btn btn-success">
+                                    <i class="fas fa-plus"></i> Add Candidate
+                                </a>
+                            <?php } else { ?>
+                                <a href="add-candidate.php" class="btn btn-success">
+                                    <i class="fas fa-plus"></i> Add Candidate
+                                </a>
+                            <?php } ?>
                         </div>
                         <div class="card-body p-2">
                             <div class="table-responsive">
