@@ -62,7 +62,7 @@ if (strlen($_SESSION['alogin']) == "") {
                             $totalstudents = $query1->rowCount();
                             ?>
                             <h3><?php echo $totalstudents; ?></h3>
-                            <p>Regd Candidates</p>
+                            <p>Regd Candidates1</p>
                         </div>
                         <div class="icon"><i class="fa-solid fa-users"></i></div>
                     </div>
