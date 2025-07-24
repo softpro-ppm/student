@@ -48,7 +48,7 @@ if (strlen($_SESSION['alogin']) == "") {
 
       <!-- Main Content -->
       <main class="col-lg-10 col-md-9 p-4">
-        <h2 class="mb-4">Softpro Dashboard 1</h2>
+        <h2 class="mb-4">Softpro Dashboard </h2>
         <div class="row g-3">
             <!-- Regd Candidates Card -->
             <div class="col-md-3">
@@ -62,7 +62,7 @@ if (strlen($_SESSION['alogin']) == "") {
                             $totalstudents = $query1->rowCount();
                             ?>
                             <h3><?php echo $totalstudents; ?></h3>
-                            <p>Regd Candidates1</p>
+                            <p>Regd Candidates</p>
                         </div>
                         <div class="icon"><i class="fa-solid fa-users"></i></div>
                     </div>
